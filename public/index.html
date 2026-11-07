@@ -80,7 +80,12 @@ const h=(t,p,...c)=>React.createElement(t,typeof t==='string'&&p&&p.class?{...p,
 const html=htm.bind(h);
 const N=n=>(+n||0).toLocaleString('fr-FR');
 const ls=(k,d)=>{try{const v=localStorage.getItem('mgr:'+k);return v?JSON.parse(v):d}catch(e){return d}};
-function useLS(k,d){const [v,s]=useState(()=>ls(k,d));useEffect(()=>{try{localStorage.setItem('mgr:'+k,JSON.stringify(v))}catch(e){}},[k,v]);return [v,s]}
+/* ---------- Serveur (MVP) : client API et synchronisation de l’état ----------
+   Invité : tout reste dans localStorage (comme la maquette). Connecté : chaque clé est aussi envoyée à /api/state/:clé (anti-rebond 600 ms). */
+const API={async call(m,u,b){try{const r=await fetch(u,{method:m,credentials:'same-origin',headers:b!==undefined?{'Content-Type':'application/json'}:{},body:b!==undefined?JSON.stringify(b):undefined});let j=null;try{j=await r.json()}catch(e){}return {ok:r.ok,status:r.status,json:j}}catch(e){return {ok:false,status:0,json:null}}}};
+const SYNC={on:false,last:{},reg:{},timers:{},put(k,v){const j=JSON.stringify(v);if(!SYNC.on||SYNC.last[k]===j)return;clearTimeout(SYNC.timers[k]);SYNC.timers[k]=setTimeout(async()=>{const r=await API.call('PUT','/api/state/'+k,{value:v});if(r.ok)SYNC.last[k]=j},600)}};
+const SrvC=React.createContext({user:null,feat:{ai:[],social:[]},live:{},setLive(){},say(){},go(){}});
+function useLS(k,d){const [v,s]=useState(()=>ls(k,d));useEffect(()=>{SYNC.reg[k]=s;return()=>{delete SYNC.reg[k]}},[k]);useEffect(()=>{try{localStorage.setItem('mgr:'+k,JSON.stringify(v))}catch(e){}SYNC.put(k,v)},[k,v]);return [v,s]}
 
 /* ---------- Icônes ---------- */
 const P={home:'M3 10.5 12 3l9 7.5V21H3z',user:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',chart:'M4 20V10M10 20V4M16 20v-7M22 20H2',spark:'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z',dash:'M3 3h8v8H3zM13 3h8v5h-8zM13 12h8v9h-8zM3 15h8v6H3z',trend:'M3 17l6-6 4 4 8-8M15 7h6v6',crown:'M3 7l4 4 5-7 5 7 4-4-2 12H5z',copy:'M9 9h11v11H9zM5 15V5h10',check:'M4 12l5 5L20 6',share:'M12 15V3M7 8l5-5 5 5M5 14v6h14v-6',music:'M9 18V5l11-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM20 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z',gear:'M4 7h9M17 7h3M4 17h3M11 17h9M14 4v6M8 14v6',reset:'M3 12a9 9 0 1 0 3-6.7M3 4v5h5',monitor:'M3 4h18v12H3zM8 20h8M12 16v4',phone:'M7 2h10v20H7zM11 18h2',install:'M12 3v12M7 10l5 5 5-5M5 21h14'};
@@ -412,6 +417,19 @@ ${s===2&&html`<div class="text-center py-4"><span class="inline-grid place-items
 </div></div>`}
 
 
+/* ---------- Paramètres : compte ---------- */
+const IA_N={claude:'Claude',gemini:'Gemini',grok:'Grok'};
+function Compte(){
+const S=useContext(SrvC),[tab,setTab]=useState('new'),[em,setEm]=useState(''),[pw,setPw]=useState(''),[er,setEr]=useState(''),[b,setB]=useState(false),u=S.user;
+const submit=async e=>{e.preventDefault();setEr('');setB(true);const m=await S.auth(tab==='new'?'register':'login',em.trim(),pw);setB(false);if(m)setEr(m);else setPw('')};
+if(u){const sel=u.aiProvider||(S.feat.ai.includes(S.feat.aiDefault)?S.feat.aiDefault:S.feat.ai[0]);
+return html`<div class="card"><h2 class="font-bold">Mon compte</h2><p class="text-sm mut mt-1">${u.email} · offre ${u.offer}${u.premiumUntil?' jusqu’au '+new Date(u.premiumUntil).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}):''}</p>
+${u.offer==='PREMIUM'&&S.feat.ai.length>1&&html`<div><p class="text-xs mut mt-3">IA utilisée pour tes textes et conseils</p><div class="flex flex-wrap gap-2 mt-1">${S.feat.ai.map(n=>html`<button key=${n} class=${'chip '+(n===sel?'on':'')} onClick=${async()=>{const r=await API.call('PUT','/api/me/ai',{provider:n});if(r.ok){await S.reloadMe();S.say('IA : '+IA_N[n]+' ✓')}}}>${IA_N[n]||n}</button>`)}</div></div>`}
+<button class="btn btn2 mt-3" onClick=${S.logout}>Me déconnecter</button></div>`}
+return html`<div class="card"><h2 class="font-bold">Mon compte</h2><p class="text-sm mut mt-1">Sans compte, tes données restent dans ce navigateur. Avec un compte, tu les retrouves partout et tu peux passer à PREMIUM.</p>
+<div class="flex gap-2 mt-3"><button type="button" class=${'chip '+(tab==='new'?'on':'')} onClick=${()=>{setTab('new');setEr('')}}>Créer un compte</button><button type="button" class=${'chip '+(tab==='in'?'on':'')} onClick=${()=>{setTab('in');setEr('')}}>Me connecter</button></div>
+<form class="mt-3" onSubmit=${submit}><${F} l="Adresse e-mail"><input type="email" autoComplete="email" required class="inp" value=${em} onInput=${e=>setEm(e.target.value)}/><//><${F} l="Mot de passe (8 caractères minimum)" err=${er}><input type="password" autoComplete=${tab==='new'?'new-password':'current-password'} required minLength="8" class="inp" value=${pw} onInput=${e=>setPw(e.target.value)}/><//><button class="btn w-full" disabled=${b}>${b?'Un instant…':tab==='new'?'Créer mon compte':'Me connecter'}</button></form></div>`}
+
 /* ---------- Paramètres : réinitialisation de la démonstration ---------- */
 function Confirm({title,text,okLabel,ok,close,noLabel}){
 const pc=useWide();
@@ -422,6 +440,7 @@ return html`<div class=${'fixed inset-0 z-30 flex justify-center '+(pc?'items-ce
 function Reglages({ask}){const pc=useWide();
 return html`<div><h1 class="text-2xl font-extrabold">Paramètres</h1><p class="mut text-sm mb-4">Outils pour présenter MANAGER en démonstration.</p>
 <div class=${pc?'grid grid-cols-2 gap-4 items-start':'space-y-3'}>
+<${Compte}/>
 <div class="card"><h2 class="font-bold">Réinitialiser la démonstration</h2><p class="text-sm mut mt-1">Efface le profil, l’audience, le plan, les actions cochées, les résultats, les réseaux connectés et l’offre choisie. MANAGER repart d’un profil vide, comme à la première utilisation. Les autres données de ton navigateur ne sont pas touchées.</p><button class="btn mt-3" onClick=${()=>ask('reset')}><${I} n="reset" s=${18}/> Réinitialiser la démonstration</button></div>
 <div class="card"><h2 class="font-bold">Artiste d’exemple</h2><p class="text-sm mut mt-1">Charge un profil fictif (Zeynab Kora) avec des résultats d’exemple pour montrer rapidement le tableau de bord. Les données actuelles sont remplacées.</p><button class="btn btn2 mt-3" onClick=${()=>ask('ex')}>Charger l’exemple</button></div></div></div>`}
 
@@ -479,7 +498,9 @@ useEffect(()=>{const m=document.querySelector('meta[name=viewport]');if(!m)retur
 const [page,setPage]=useState('home'),[wk,setWk]=useState(1),[busy,setBusy]=useState(false),[toast,setToast]=useState(''),[pay,setPay]=useState(null),[conf,setConf]=useState(null);
 const [prof0,setProf]=useLS('prof',BLANK),prof={...DEF0,...prof0};
 const [st,setSt]=useLS('st',ST0);
-const [plan,setPlan]=useLS('plan',null),[done,setDone]=useLS('done',[]),[res,setRes]=useLS('res',RES_B()),[offer0,setOffer]=useLS('offer','FREE'),[soc,setSoc]=useLS('soc',{}),[demo,setDemo]=useLS('demo',false),[reco,setReco]=useLS('reco',{}),offer=offer0==='PREMIUM'?'PREMIUM':'FREE';
+const [me,setMe]=useState(null),[live,setLive]=useState({}),[imp,setImp]=useState(false);
+const feat=(me&&me.features)||{ai:[],social:[],payMode:null},user=me&&me.user;
+const [plan,setPlan]=useLS('plan',null),[done,setDone]=useLS('done',[]),[res,setRes]=useLS('res',RES_B()),[soc,setSoc]=useLS('soc',{}),[demo,setDemo]=useLS('demo',false),[reco,setReco]=useLS('reco',{}),offer=user&&user.offer==='PREMIUM'?'PREMIUM':'FREE',setOffer=()=>{};
 const created=!!(prof.artist&&prof.artist.trim())&&!prof.draft;
 const go=p=>{setPage(p);toTop()};
 const [arch,setArch]=useLS('arch',[]),[seen,setSeen]=useLS('seen',{}),[wkEnd,setWkEnd]=useState(null);
@@ -489,6 +510,19 @@ if(plan.every(a=>done.includes(a.id))){if(!seen.bilan){setSeen({w1:1,w2:1,w3:1,w
 const w=[1,2,3,4].find(w=>{const l=plan.filter(a=>a.w===w);return l.length&&l.every(a=>done.includes(a.id))&&!seen['w'+w]});
 if(w){setSeen({...seen,['w'+w]:1});setWkEnd(w)}},[plan,done,busy]);
 const say=m=>{setToast(m);setTimeout(()=>setToast(''),Math.max(1800,m.length*50))};
+/* Compte : lecture de /api/me, chargement de l’état serveur, import des données d’invité */
+const reloadMe=async()=>{const r=await API.call('GET','/api/me');if(r.ok){setMe(r.json);return r.json}return null};
+const reloadSoc=async()=>{const r=await API.call('GET','/api/social');if(r.ok)setLive(r.json.accounts||{})};
+const DEF_STATE=()=>({prof:BLANK,st:ST0,plan:null,done:[],res:RES_B(),soc:{},demo:false,reco:{},arch:[],seen:{}});
+const localHasData=()=>!!(prof.artist&&prof.artist.trim())||!!plan;
+const applyServer=state=>{const D=DEF_STATE();Object.keys(D).forEach(k=>{const v=k in state?state[k]:D[k];SYNC.last[k]=JSON.stringify(v);SYNC.reg[k]&&SYNC.reg[k](v)})};
+const loadAccount=async fromLogin=>{const r=await API.call('GET','/api/state');if(!r.ok)return;const stt=r.json.state||{};
+if(Object.keys(stt).length){applyServer(stt);if(fromLogin&&localHasData())say('Données de ton compte chargées')}else if(fromLogin&&localHasData())setImp(true);
+SYNC.on=true;await reloadSoc()};
+const auth=async(mode,email,password)=>{const r=await API.call('POST','/api/auth/'+mode,{email,password});if(!r.ok)return (r.json&&r.json.message)||'Erreur réseau, réessaie.';await reloadMe();await loadAccount(true);return null};
+const logout=async()=>{await API.call('POST','/api/auth/logout',{});SYNC.on=false;wipe();location.reload()};
+const doImport=async()=>{setImp(false);const r=await API.call('POST','/api/state/import',{state:{prof,st,plan,done,res,soc,demo,reco,arch,seen}});if(r.ok){await loadAccount(false);say('Données importées dans ton compte ✓')}else say('Import impossible pour le moment')};
+useEffect(()=>{(async()=>{const m=await reloadMe();if(m&&m.user)await loadAccount(false)})()},[]);
 const clear=()=>{setProf(BLANK);setPlan(null);setReco({});setSeen({});setWk(1);setRes(RES_B());setSt(ST0);setSoc({});setDone([]);setDemo(false);say('Données de démonstration effacées')};
 const resetAll=()=>{setConf(null);setPay(null);setBusy(false);setProf(BLANK);setSt(ST0);setPlan(null);setDone([]);setRes(RES_B());setOffer('FREE');setSoc({});setDemo(false);setReco({});setSeen({});setArch([]);setWk(1);go('profil');say('Démonstration réinitialisée ✓');wipe();setTimeout(wipe,200)};
 const loadEx=()=>{setConf(null);setProf(DEF0);setSt(ST_EX);setRes(RES0);setDone([0,1,2,3,4,5]);setPlan(null);setReco({});setSeen({w1:1,w2:1});setSoc({});setWk(1);setDemo(true);go('dash');say('Artiste d’exemple chargé ✓')};
@@ -514,7 +548,7 @@ offres:html`<${Offres} offer=${offer} buy=${buy}/>`,
 reglages:html`<${Reglages} ask=${setConf}/>`}[page];
 const demoBar=demo&&html`<div class="card text-xs flex items-center justify-between gap-3" role="note"><span>Mode démo : profil, audience et résultats d’exemple, tous fictifs.</span><button class="chip shrink-0" onClick=${()=>{clear();go('profil')}}>Repartir de zéro</button></div>`;
 const CF={new:{title:'Lancer une nouvelle campagne ?',text:offer==='PREMIUM'?'Ta campagne actuelle est gardée dans « Mes autres plans », avec ses résultats et son bilan. Tu pourras la rouvrir à tout moment. Tu vas saisir les informations de ton nouveau morceau.':'Avec l’offre FREE, le nouveau plan remplace l’actuel : son suivi et son bilan ne seront plus accessibles. PREMIUM permet de garder tes anciennes campagnes. Tu vas saisir les informations de ton nouveau morceau.',okLabel:'Lancer la campagne',ok:newCamp},pdf:{title:'Le PDF complet est réservé à PREMIUM',text:'Avec l’offre FREE, tu consultes ton plan de promotion directement dans MANAGER. Passe à PREMIUM pour télécharger ton plan complet (morceau, objectifs, actions et calendrier sur 4 semaines) au format PDF.',okLabel:'Voir PREMIUM',no:'Fermer',ok:()=>{setConf(null);go('offres')}},reset:{title:'Réinitialiser la démonstration ?',text:'Cette action supprimera les données enregistrées dans la démonstration actuelle : profil artiste, audience, plan de promotion, actions cochées, résultats de suivi, réseaux connectés et offre choisie. Tu repartiras d’un profil vide. Cette action est définitive.',okLabel:'Oui, réinitialiser',ok:resetAll},ex:{title:'Charger l’artiste d’exemple ?',text:'Les données actuelles de la démonstration seront remplacées par un profil fictif (Zeynab Kora) et des résultats d’exemple.',okLabel:'Charger l’exemple',ok:loadEx}};
-const overlays=html`<${React.Fragment}>${pay&&html`<${Pay} o=${pay} close=${()=>setPay(null)} ok=${k=>{setOffer(k);setPay(null);say('Offre '+k+' activée (démo) ✓')}}/>`}${conf&&html`<${Confirm} title=${CF[conf].title} text=${CF[conf].text} okLabel=${CF[conf].okLabel} ok=${CF[conf].ok} noLabel=${CF[conf].no} close=${()=>setConf(null)}/>`}${wkEnd&&!conf&&html`<${Confirm} title=${'Semaine '+wkEnd+' terminée 🎉'} text=${'Tu as terminé toutes les actions de la semaine '+wkEnd+'. Renseigne maintenant les résultats obtenus (vues, écoutes, abonnés, interactions) pour que Manager les compare à tes objectifs.'} okLabel="Saisir mes résultats" noLabel="Plus tard" ok=${()=>{const w=wkEnd;setWkEnd(null);setWk(w);go('suivi')}} close=${()=>setWkEnd(null)}/>`}${toast&&html`<div class="fixed left-1/2 -translate-x-1/2 z-40 px-4 py-2 rounded-full text-sm text-white max-w-[90%] text-center" style=${{bottom:'calc('+(wide?'2rem':'5rem')+' + env(safe-area-inset-bottom,0px))',background:'#17112b'}} role="status">${toast}</div>`}<//>`;
+const overlays=html`<${React.Fragment}>${imp&&html`<${Confirm} title="Importer tes données ?" text="Ce navigateur contient déjà un profil ou un plan. Veux-tu les enregistrer dans ton compte pour les retrouver partout ?" okLabel="Importer" noLabel="Plus tard" ok=${doImport} close=${()=>setImp(false)}/>`}${pay&&html`<${Pay} o=${pay} close=${()=>setPay(null)} ok=${k=>{setOffer(k);setPay(null);say('Offre '+k+' activée (démo) ✓')}}/>`}${conf&&html`<${Confirm} title=${CF[conf].title} text=${CF[conf].text} okLabel=${CF[conf].okLabel} ok=${CF[conf].ok} noLabel=${CF[conf].no} close=${()=>setConf(null)}/>`}${wkEnd&&!conf&&html`<${Confirm} title=${'Semaine '+wkEnd+' terminée 🎉'} text=${'Tu as terminé toutes les actions de la semaine '+wkEnd+'. Renseigne maintenant les résultats obtenus (vues, écoutes, abonnés, interactions) pour que Manager les compare à tes objectifs.'} okLabel="Saisir mes résultats" noLabel="Plus tard" ok=${()=>{const w=wkEnd;setWkEnd(null);setWk(w);go('suivi')}} close=${()=>setWkEnd(null)}/>`}${toast&&html`<div class="fixed left-1/2 -translate-x-1/2 z-40 px-4 py-2 rounded-full text-sm text-white max-w-[90%] text-center" style=${{bottom:'calc('+(wide?'2rem':'5rem')+' + env(safe-area-inset-bottom,0px))',background:'#17112b'}} role="status">${toast}</div>`}<//>`;
 const side=html`<aside class="fixed inset-y-0 left-0 w-64 z-20 border-r flex flex-col p-4" style=${{background:'var(--card)',borderColor:'var(--bd)'}}><div class="flex items-center justify-between gap-2"><button class="tab" aria-label="Accueil" onClick=${()=>go('home')}><${Logo}/></button><button class="chip text-xs" onClick=${()=>go('offres')}>${offer}</button></div>
 <nav class="mt-6 flex-1 space-y-1 overflow-y-auto" aria-label="Navigation principale">${SIDE.map(([k,l,ic])=>html`<button key=${k} class=${'tab side flex items-center gap-3 w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium '+(page===k?'on':'')} aria-current=${page===k?'page':null} onClick=${()=>go(k)}><${I} n=${ic} s=${20}/>${l}</button>`)}</nav>
 <div class="space-y-2">${dp&&html`<${InstBtn} go=${install} cls="w-full justify-center py-2"/>`}<${ModeBtn} view=${view} toggle=${toggle} cls="w-full justify-center py-2"/><button class="chip w-full inline-flex items-center justify-center gap-2 py-2" onClick=${()=>setConf('reset')}><${I} n="reset" s=${16}/> Réinitialiser la démonstration</button></div></aside>`;
@@ -526,7 +560,7 @@ const shell=wide
 :framed
 ?html`<div class="stage"><div class="fixed top-4 right-4 z-50 flex items-center gap-2">${dp&&html`<${InstBtn} go=${install}/>`}<${ModeBtn} view=${view} toggle=${toggle}/></div><div class="phone"><div id="scroller" class="phone-sc">${mobTop}</div>${bottomNav}${overlays}</div></div>`
 :html`<div>${mobTop}${bottomNav}${overlays}</div>`;
-return html`<${VC.Provider} value=${wide}>${shell}<//>`}
+return html`<${VC.Provider} value=${wide}><${SrvC.Provider} value=${{me,user,feat,live,setLive,reloadMe,reloadSoc,auth,logout,say,go}}>${shell}<//><//>`}
 ReactDOM.createRoot(document.getElementById('root')).render(html`<${App}/>`);
 </script>
 </body>

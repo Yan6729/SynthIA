@@ -6,6 +6,7 @@ function mount(deps) {
     app.get('/api/me', (req, res) => {
       const features = {
         ai: Object.entries(cfg.ai.providers).filter(([, p]) => p.key).map(([k]) => k),
+        aiDefault: cfg.ai.default,
         payMode: cfg.pay.mode,
         price: cfg.pay.price,
         social: cfg.tokenKey ? Object.entries(cfg.social).filter(([, p]) => p.id && p.secret).map(([k]) => k) : [],
