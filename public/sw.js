@@ -1,6 +1,6 @@
 /* Service worker de Synthia.
    Pour publier une nouvelle version : changer le numéro ci-dessous. */
-const VERSION = 'synthia-1';
+const VERSION = 'synthia-2';
 
 const ASSETS = [
   './',
