@@ -10,7 +10,7 @@ Le front est la PWA de l'équipe (`public/`), le serveur ajoute **comptes, base 
 ## Lancer en local
 
 ```bash
-npm install
+npm install                 # .npmrc : better-sqlite3 utilise ses binaires précompilés, pas de compilateur requis
 cp .env.example .env        # puis remplir ce qui vous intéresse
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"   # → TOKEN_KEY
 npm start                   # http://localhost:3000

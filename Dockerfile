@@ -1,8 +1,7 @@
 FROM node:22-slim
 WORKDIR /app
-# better-sqlite3 est précompilé pour node:22 ; ces paquets ne servent que si un binaire manque.
-RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
-COPY package*.json ./
+# better-sqlite3 embarque ses binaires précompilés (voir .npmrc : pas de compilation à l'installation).
+COPY package*.json .npmrc ./
 RUN npm ci --omit=dev
 COPY server ./server
 COPY public ./public
