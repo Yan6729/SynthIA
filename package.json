@@ -13,7 +13,8 @@
     "test": "node --test \"test/*.test.js\"",
     "e2e": "node e2e/run.js",
     "backup": "node scripts/backup.js",
-    "contrast": "node scripts/check-contrast.js"
+    "contrast": "node scripts/check-contrast.js",
+    "i18n": "node scripts/check-i18n.js"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",
