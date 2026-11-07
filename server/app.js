@@ -10,6 +10,17 @@ function createApp(deps) {
   app.set('trust proxy', cfg.prod ? 1 : false);
   app.locals.deps = deps;
 
+  // Journal : une ligne JSON par requête, sans query string, sans IP, sans corps (pas de données personnelles).
+  if (cfg.logRequests) {
+    app.use((req, res, next) => {
+      const t0 = process.hrtime.bigint();
+      res.on('finish', () => {
+        if (req.path === '/healthz') return;
+        console.log(JSON.stringify({ t: new Date().toISOString(), m: req.method, p: req.path, s: res.statusCode, ms: Math.round(Number(process.hrtime.bigint() - t0) / 1e6) }));
+      });
+      next();
+    });
+  }
   app.use(http.securityHeaders(cfg));
   app.use(http.cookieMiddleware);
 
@@ -20,7 +31,9 @@ function createApp(deps) {
   app.use('/api', http.csrfGuard(cfg));
   app.use('/api', http.rateLimit({ max: 300, windowMs: 15 * 60 * 1000 }));
 
-  app.get('/healthz', (req, res) => res.json({ ok: true }));
+  app.get('/healthz', (req, res) => {
+    try { deps.db.prepare('SELECT 1').get(); res.json({ ok: true }); } catch (e) { res.status(503).json({ ok: false }); }
+  });
 
   for (const mount of deps.routes || []) mount(app);
 

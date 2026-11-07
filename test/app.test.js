@@ -41,3 +41,17 @@ test('CSRF : Origin identique à APP_URL accepté', async () => {
   assert.equal(r.status, 201);
   await s.close();
 });
+
+test('healthz teste la base ; les journaux ne contiennent ni query ni données', async () => {
+  const lines = [];
+  const orig = console.log; console.log = (l) => lines.push(String(l));
+  const s = await start({ LOG_REQUESTS: '1' });
+  const c = s.client();
+  await c.get('/api/me?secret=abc');
+  console.log = orig;
+  assert.ok(lines.some((l) => JSON.parse(l).p === '/api/me'));
+  assert.ok(!lines.join('').includes('secret'));
+  s.db.close();
+  assert.equal((await c.get('/healthz')).status, 503);
+  await new Promise((r) => s.close().then(r).catch(r));
+});
