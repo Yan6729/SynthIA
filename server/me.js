@@ -9,6 +9,7 @@ function mount(deps) {
         aiDefault: cfg.ai.default,
         payMode: cfg.pay.mode,
         price: cfg.pay.price,
+        support: cfg.supportEmail || null,
         social: cfg.tokenKey ? Object.entries(cfg.social).filter(([, p]) => p.id && p.secret).map(([k]) => k) : [],
       };
       res.json({ user: req.user ? deps.userView(req.user) : null, features });

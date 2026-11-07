@@ -12,6 +12,7 @@ function loadConfig(env = process.env) {
     appUrl,
     dbPath: env.DB_PATH || path.join(__dirname, '..', 'data', 'manager.db'),
     tokenKey: env.TOKEN_KEY || '',
+    supportEmail: /^[^\s@<>"]{1,64}@[^\s@<>"]{1,190}\.[^\s@<>"]{2,}$/.test(env.SUPPORT_EMAIL || '') ? env.SUPPORT_EMAIL : '',
     publicDir: path.join(__dirname, '..', 'public'),
     sessionDays: 30,
     logRequests: env.LOG_REQUESTS ? env.LOG_REQUESTS === '1' : prod,

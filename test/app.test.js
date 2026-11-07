@@ -55,3 +55,15 @@ test('healthz teste la base ; les journaux ne contiennent ni query ni données',
   assert.equal((await c.get('/healthz')).status, 503);
   await new Promise((r) => s.close().then(r).catch(r));
 });
+
+test('/api/me : adresse de contact seulement si elle est valide', async () => {
+  const a = await start({ SUPPORT_EMAIL: 'aide@synthia.app' });
+  assert.equal((await a.client().get('/api/me')).json.features.support, 'aide@synthia.app');
+  await a.close();
+  const b = await start({ SUPPORT_EMAIL: 'pas une adresse<script>' });
+  assert.equal((await b.client().get('/api/me')).json.features.support, null);
+  await b.close();
+  const c = await start({});
+  assert.equal((await c.client().get('/api/me')).json.features.support, null);
+  await c.close();
+});

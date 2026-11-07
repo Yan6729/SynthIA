@@ -44,6 +44,7 @@ docker compose up --build    # http://localhost:3000, base SQLite dans le volume
 | `APP_URL` | Adresse publique (https en production). Sert aux redirections de paiement et OAuth |
 | `TOKEN_KEY` | Clé AES-256 (32 octets base64) qui chiffre les jetons des réseaux. Obligatoire en production |
 | `DB_PATH` | Fichier SQLite (sur un volume persistant) |
+| `SUPPORT_EMAIL` | Adresse de contact affichée dans la page Aide (facultatif ; sans elle, la page n'affiche pas de lien de contact) |
 | `MAIL_MODE`, `RESEND_API_KEY`, `MAIL_FROM` | E-mails de vérification et de mot de passe oublié. `console` écrit le lien dans les logs (dev) ; obligatoire en `resend` en production. Format de l'API Resend à vérifier avec ta clé |
 | `LOG_REQUESTS` | `1` : une ligne JSON par requête, sans IP ni données |
 | `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` | IA Claude (modèle par défaut `claude-sonnet-5-5`) |
