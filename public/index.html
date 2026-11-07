@@ -94,7 +94,12 @@ const ls=(k,d)=>{try{const v=localStorage.getItem('mgr:'+k);return v?JSON.parse(
 /* ---------- Serveur (MVP) : client API et synchronisation de l’état ----------
    Invité : tout reste dans localStorage (comme la maquette). Connecté : chaque clé est aussi envoyée à /api/state/:clé (anti-rebond 600 ms). */
 const API={async call(m,u,b){try{const r=await fetch(u,{method:m,credentials:'same-origin',headers:b!==undefined?{'Content-Type':'application/json'}:{},body:b!==undefined?JSON.stringify(b):undefined});let j=null;try{j=await r.json()}catch(e){}return {ok:r.ok,status:r.status,json:j}}catch(e){return {ok:false,status:0,json:null}}}};
-const SYNC={on:false,last:{},reg:{},timers:{},put(k,v){const j=JSON.stringify(v);if(!SYNC.on||SYNC.last[k]===j)return;clearTimeout(SYNC.timers[k]);SYNC.timers[k]=setTimeout(async()=>{const r=await API.call('PUT','/api/state/'+k,{value:v});if(r.ok)SYNC.last[k]=j},600)}};
+const SYNC={on:false,last:{},reg:{},timers:{},pend:{},
+async send(k,v,ka){const j=JSON.stringify(v);delete SYNC.pend[k];try{const r=await fetch('/api/state/'+k,{method:'PUT',credentials:'same-origin',keepalive:!!ka&&j.length<60000,headers:{'Content-Type':'application/json'},body:JSON.stringify({value:v})});if(r.ok)SYNC.last[k]=j}catch(e){}},
+put(k,v){const j=JSON.stringify(v);if(!SYNC.on||SYNC.last[k]===j)return;clearTimeout(SYNC.timers[k]);SYNC.pend[k]=v;SYNC.timers[k]=setTimeout(()=>SYNC.send(k,v),600)},
+/* Quitter la page (paiement, connexion à un réseau, fermeture) ne doit pas perdre la dernière saisie : envoi immédiat */
+flush(){Object.keys(SYNC.pend).forEach(k=>{clearTimeout(SYNC.timers[k]);SYNC.send(k,SYNC.pend[k],true)})}};
+window.addEventListener('pagehide',()=>SYNC.flush());document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')SYNC.flush()});
 const SrvC=React.createContext({user:null,feat:{ai:[],social:[]},live:{},setLive(){},say(){},go(){}});
 function useLS(k,d){const [v,s]=useState(()=>ls(k,d));useEffect(()=>{SYNC.reg[k]=s;return()=>{delete SYNC.reg[k]}},[k]);useEffect(()=>{try{localStorage.setItem('mgr:'+k,JSON.stringify(v))}catch(e){}SYNC.put(k,v)},[k,v]);return [v,s]}
 
