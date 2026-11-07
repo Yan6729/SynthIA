@@ -5,7 +5,7 @@ Priorités demandées : fiabilité prod, vraies clés + revue des plateformes, r
 
 ## Principes
 - Chaque lot = une série de commits, testée, avec le design écrit **avant** de toucher au front.
-- Ce qui dépend de comptes que seul Yan possède (FedaPay live, clés IA, applications TikTok / Meta / Google) est préparé côté code et documenté, jamais simulé comme « fait ».
+- Ce qui dépend de comptes que seul Yan possède (Stripe live, clés IA, applications TikTok / Meta / Google) est préparé côté code et documenté, jamais simulé comme « fait ».
 
 ## Lot 1 : confiance et conformité (code, faisable tout de suite)
 1. **E-mail** : vérification d'adresse, mot de passe oublié, via un petit « mailer » (console en dev, Resend en prod).
@@ -14,7 +14,7 @@ Priorités demandées : fiabilité prod, vraies clés + revue des plateformes, r
 4. **Exploitation** : journaux structurés (une ligne JSON par requête, sans données personnelles), sauvegarde de la base, `/healthz` avec test de la base, CI GitHub Actions (tests à chaque push).
 
 ## Lot 2 : vraies clés et revue des plateformes (surtout administratif)
-- FedaPay : passer en `live` après les tests sandbox, webhook de production.
+- Stripe : passer en clés `live` après les tests en mode test, webhook de production.
 - IA : choisir le fournisseur par défaut selon coût et qualité en français, fixer les modèles.
 - TikTok, Instagram, YouTube : dossier de revue d'application par plateforme (vidéo de démonstration, pages légales, justification des portées).
 - Je prépare les textes et captures ; **la soumission se fait avec tes comptes**.
@@ -40,4 +40,4 @@ Lot 1 → Lot 3 (déploiement bêta) → Lot 2 en parallèle (délais des platef
 - Rebaptisé Synthia, thème clair / sombre, palettes violet (défaut) / teal / personnalisée (image ou vidéo de l'utilisateur).
 - Éléments de démonstration retirés, nouvelles fonctions du front (agenda .ics, WhatsApp, textes modifiables, démarrage guidé, Aide), sécurité du compte.
 - Reste du lot « refonte du front » : écrans de l'onboarding en plusieurs pas, retours utilisateurs de la bêta.
-- Déclencheurs inchangés : domaine, clés FedaPay / IA, dossiers de revue des plateformes, relecture juridique des pages légales (placeholders `[À FAIRE VALIDER]`).
+- Déclencheurs inchangés : domaine, clés Stripe / IA, dossiers de revue des plateformes, relecture juridique des pages légales (placeholders `[À FAIRE VALIDER]`).

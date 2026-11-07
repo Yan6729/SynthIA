@@ -8,7 +8,7 @@
 <ul>
 <li><b>Compte</b> : adresse e-mail, mot de passe (jamais en clair : seulement une empreinte), date de création, état de vérification de l’e-mail.</li>
 <li><b>Ton projet</b> : profil d’artiste, plan de promotion, actions cochées, résultats saisis, conseils.</li>
-<li><b>Paiements</b> : montant, date, statut et référence de transaction. Ton numéro Mobile Money est saisi chez FedaPay : Synthia ne le reçoit ni ne le garde.</li>
+<li><b>Paiements</b> : montant, date, statut et référence de transaction. Les coordonnées de paiement (carte, portefeuille) sont saisies chez Stripe : Synthia ne les reçoit ni ne les garde.</li>
 <li><b>Réseaux connectés</b> (si tu les connectes) : nom du compte, abonnés, vues, likes, nombre de publications, et un jeton d’accès <b>chiffré</b> en lecture seule.</li>
 <li><b>Journaux techniques</b> : date, page appelée, code de réponse. Pas d’adresse IP ni de contenu.</li>
 </ul>
@@ -17,7 +17,8 @@
 <h2>Qui reçoit des données ?</h2>
 <ul>
 <li><b>Fournisseurs d’IA</b> (Anthropic, Google ou xAI, selon ton choix, PREMIUM seulement) : reçoivent le profil d’artiste (nom d’artiste, genre, titre, public cible, réseaux, budget) et les textes du plan, pour les réécrire. Pas ton e-mail.</li>
-<li><b>FedaPay</b> : traite le paiement.</li>
+<li><b>Stripe</b> : traite le paiement (montant en dollars, adresse e-mail du compte).</li>
+<li><b>Google Fonts</b> : seulement si tu choisis une police Google dans Paramètres. Ton navigateur la télécharge chez Google, qui reçoit alors l’adresse IP de ton appareil. Avec la police « Système », rien n’est envoyé.</li>
 <li><b>Resend</b> (ou prestataire d’e-mail équivalent) : envoie les e-mails de confirmation et de mot de passe.</li>
 <li><b>TikTok, Meta (Instagram), Google (YouTube)</b> : uniquement si tu connectes ces comptes ; nous leur demandons tes statistiques.</li>
 <li><b>Hébergeur</b> : [À COMPLÉTER : nom et pays].</li>

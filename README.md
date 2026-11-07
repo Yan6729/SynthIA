@@ -1,10 +1,10 @@
 # Synthia : MVP
 
 Application de plan de promotion musicale pour artistes émergents (hackathon IA & Musique, SIMA 2026).
-Le front est la PWA de l'équipe (`public/`), le serveur ajoute **comptes, base de données, IA, paiement Mobile Money et connexion aux réseaux**.
+Le front est la PWA de l'équipe (`public/`), le serveur ajoute **comptes, base de données, IA, paiement en dollars (Stripe) et connexion aux réseaux**.
 
 - Front : PWA (hors-ligne, installable), mode PC / mobile, plan par règles, bilan, export PDF.
-- Serveur : Node 22, Express, SQLite (`better-sqlite3`), SDK `fedapay`.
+- Serveur : Node 22, Express, SQLite (`better-sqlite3`). Paiement : API REST de Stripe, sans SDK.
 - Détails d'architecture : [`DESIGN-MVP.md`](DESIGN-MVP.md). Front d'origine : [`docs-front-pwa.md`](docs-front-pwa.md).
 
 ## Lancer en local
@@ -35,7 +35,7 @@ node scripts/setup.js        # crée .env (TOKEN_KEY) ; ou : cp .env.example .en
 docker compose up --build    # http://localhost:3000, base SQLite dans le volume « manager-data » (nom gardé de l'ancien nom du projet, pour ne perdre aucune donnée)
 ```
 
-`docker-compose.yml` tourne en mode développement (paiement simulé possible). Pour un vrai déploiement : `NODE_ENV=production`, `APP_URL` en https, `PAY_MODE=fedapay` dans `.env`, derrière un proxy HTTPS.
+`docker-compose.yml` tourne en mode développement (paiement simulé possible). Pour un vrai déploiement : `NODE_ENV=production`, `APP_URL` en https, `PAY_MODE=stripe` dans `.env`, derrière un proxy HTTPS.
 
 ## Variables d'environnement
 
@@ -51,9 +51,9 @@ docker compose up --build    # http://localhost:3000, base SQLite dans le volume
 | `GEMINI_API_KEY` / `GEMINI_MODEL` | IA Gemini (`generateContent`) |
 | `XAI_API_KEY` / `XAI_MODEL` | IA Grok (API compatible OpenAI, `https://api.x.ai`) |
 | `AI_DEFAULT`, `AI_DAILY_QUOTA` | Fournisseur par défaut, appels IA par jour et par utilisateur (30) |
-| `PAY_MODE` | `simulate` (dev) ou `fedapay` (interdit : `simulate` en production) |
-| `FEDAPAY_SECRET_KEY`, `FEDAPAY_ENV`, `FEDAPAY_WEBHOOK_SECRET` | FedaPay (`sandbox` ou `live`) |
-| `PREMIUM_PRICE` | Prix en FCFA (5000) |
+| `PAY_MODE` | `simulate` (dev) ou `stripe` (interdit : `simulate` en production) |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe (clé `sk_test_…` pour les essais, `sk_live_…` en production ; secret de signature `whsec_…`) |
+| `PREMIUM_PRICE_USD` | Prix de PREMIUM en dollars pour 30 jours (défaut 9, minimum 0,50). L'ancienne variable `PREMIUM_PRICE` (FCFA) n'est plus lue |
 | `TIKTOK_CLIENT_KEY/SECRET`, `INSTAGRAM_CLIENT_ID/SECRET`, `YOUTUBE_CLIENT_ID/SECRET` | Un réseau sans clé s'affiche « bientôt disponible » |
 
 Les adresses des API externes se changent aussi par variable (`*_BASE`, `*_AUTH_URL`), utile pour les tests.
@@ -69,7 +69,7 @@ npm run e2e   # parcours complet dans Chromium (Playwright requis), fournisseurs
 
 Tout ce qui touche un service externe a été testé **contre des faux serveurs locaux** qui reproduisent les formats des documentations. Le premier essai avec de vraies clés est à faire par vous :
 
-1. **FedaPay** : créer un compte sandbox, mettre `FEDAPAY_SECRET_KEY`, `PAY_MODE=fedapay`. Dans le tableau de bord FedaPay, ajouter le webhook `https://VOTRE_URL/api/pay/webhook` (événements `transaction.*`) et copier son secret (`wh_sandbox_…`) dans `FEDAPAY_WEBHOOK_SECRET`. Faire un paiement test : le retour doit afficher « PREMIUM activé ».
+1. **Stripe** : créer un compte, activer le mode test, mettre `STRIPE_SECRET_KEY` (`sk_test_…`) et `PAY_MODE=stripe`. Dans Développeurs > Webhooks, ajouter `https://VOTRE_URL/api/pay/webhook` (événements `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.expired`) et copier le secret `whsec_…` dans `STRIPE_WEBHOOK_SECRET`. Pour tester en local : `stripe listen --forward-to localhost:3000/api/pay/webhook`. Payer avec la carte de test `4242 4242 4242 4242` : le retour doit afficher « PREMIUM activé ». En production, remplacer par les clés live (le serveur refuse de démarrer avec `sk_test_`).
 2. **IA** : mettre au moins une clé. À vérifier : les noms de modèle Gemini (`GEMINI_MODEL`) et Grok (`XAI_MODEL`) changent vite, ajuster selon la console de chaque fournisseur.
 3. **Réseaux** : créer une application chez chaque plateforme, y déclarer l'URL de redirection `APP_URL/oauth/callback/tiktok` (idem `instagram`, `youtube`).
    - TikTok : produit Login Kit, portées `user.info.basic`, `user.info.stats`, `video.list`. Les vues sont la somme des 20 dernières vidéos (approximation).
@@ -93,7 +93,7 @@ Une seule instance : la base est un fichier SQLite et la limitation de débit es
 
 ## Sécurité, en bref
 
-Mots de passe scrypt, sessions à jeton aléatoire (seul le hachage est en base), cookie HttpOnly + SameSite=Lax, contrôle d'Origin et JSON obligatoire sur les écritures, limitation de débit, jetons des réseaux chiffrés AES-GCM et jamais renvoyés au navigateur, `state` OAuth à usage unique, paiement **toujours revérifié auprès de FedaPay** (le navigateur ne peut pas déclarer « payé »), sortie de l'IA validée, données utilisateur envoyées à l'IA comme données et non comme consignes.
+Mots de passe scrypt, sessions à jeton aléatoire (seul le hachage est en base), cookie HttpOnly + SameSite=Lax, contrôle d'Origin et JSON obligatoire sur les écritures, limitation de débit, jetons des réseaux chiffrés AES-GCM et jamais renvoyés au navigateur, `state` OAuth à usage unique, paiement **toujours revérifié auprès de Stripe** (le navigateur ne peut pas déclarer « payé »), sortie de l'IA validée, données utilisateur envoyées à l'IA comme données et non comme consignes.
 
 ## Limites connues (MVP)
 

@@ -10,7 +10,7 @@ services:
         required: false
     environment:
       # En local on reste en mode développement (cookie non « Secure », paiement simulé possible).
-      # Pour un vrai déploiement : NODE_ENV=production, APP_URL en https, PAY_MODE=fedapay.
+      # Pour un vrai déploiement : NODE_ENV=production, APP_URL en https, PAY_MODE=stripe.
       NODE_ENV: ${NODE_ENV:-development}
       APP_URL: ${APP_URL:-http://localhost:3000}
       PORT: "3000"

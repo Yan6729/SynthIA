@@ -67,7 +67,7 @@ navigateur (PWA, public/)  ──HTTPS──►  Express (server/)  ──►  S
 - Quota : 30 appels IA par jour et par utilisateur (configurable). Badge « ✨ IA » sur les textes réécrits.
 - Les champs libres du profil sont envoyés comme données (délimités), jamais comme instructions.
 
-## 5. Paiement (FedaPay sandbox)
+## 5. Paiement (FedaPay sandbox) — remplacé par Stripe en dollars, voir DESIGN-SYNTHIA.md §11.2
 
 - Offre unique : PREMIUM 5 000 FCFA, 30 jours, empilables.
 - Flux : `checkout` → transaction + token → l'utilisateur paie sur la page FedaPay (Mobile Money) → retour `/api/pay/return?id=…` → le serveur **relit la transaction** chez FedaPay, `approved` → `premium_until += 30 j`.
