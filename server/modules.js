@@ -3,4 +3,5 @@
 module.exports = [
   require('./auth').mount,
   require('./me').mount,
+  require('./state').mount,
 ];
