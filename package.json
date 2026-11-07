@@ -1,0 +1,21 @@
+{
+  "name": "manager-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Manager : plan de promo musicale pour artistes émergents (MVP)",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node --test test/",
+    "e2e": "node e2e/run.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "express": "^5.3.0",
+    "fedapay": "^1.2.5"
+  }
+}
