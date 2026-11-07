@@ -29,7 +29,15 @@ Priorités demandées : fiabilité prod, vraies clés + revue des plateformes, r
 - Se fait écran par écran, derrière les mêmes routes d'API. Un document de design est écrit et relu avant le premier commit front.
 
 ## Lot 5 : fonctions produit (selon retours de la bêta)
-Rappels (e-mail / WhatsApp), calendrier exportable, statistiques plus riches, plusieurs artistes par compte (manager).
+Rappels (e-mail / WhatsApp / notifications push, demandent une tâche planifiée serveur), objectifs de vues adaptés à l'audience, statistiques plus riches, plusieurs artistes par compte (manager).
 
 ## Ordre proposé
 Lot 1 → Lot 3 (déploiement bêta) → Lot 2 en parallèle (délais des plateformes) → retours bêta → Lots 4 et 5.
+
+
+## Fait depuis (Synthia)
+
+- Rebaptisé Synthia, thème clair / sombre, palette teal / orange / lime.
+- Éléments de démonstration retirés, nouvelles fonctions du front (agenda .ics, WhatsApp, textes modifiables, démarrage guidé, Aide), sécurité du compte.
+- Reste du lot « refonte du front » : écrans de l'onboarding en plusieurs pas, retours utilisateurs de la bêta.
+- Déclencheurs inchangés : domaine, clés FedaPay / IA, dossiers de revue des plateformes, relecture juridique des pages légales (placeholders `[À FAIRE VALIDER]`).

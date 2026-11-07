@@ -1,5 +1,7 @@
 # Design MVP : Manager avec serveur
 
+> Ce document décrit le MVP à l'époque où le projet s'appelait Manager. Le nom, le thème et les fonctions du front sont désormais décrits dans `DESIGN-SYNTHIA.md`.
+
 ## Lecture de la demande
 
 Passer de la maquette PWA (tout en `localStorage`, tout simulé) à un vrai MVP :

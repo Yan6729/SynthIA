@@ -1,4 +1,4 @@
-# Manager : MVP
+# Synthia : MVP
 
 Application de plan de promotion musicale pour artistes émergents (hackathon IA & Musique, SIMA 2026).
 Le front est la PWA de l'équipe (`public/`), le serveur ajoute **comptes, base de données, IA, paiement Mobile Money et connexion aux réseaux**.
@@ -16,7 +16,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"   # 
 npm start                   # http://localhost:3000
 ```
 
-Sans aucune clé, tout fonctionne sauf l'IA et les réseaux réels : paiement en **simulation** (`PAY_MODE=simulate`), réseaux en mode démo.
+Sans aucune clé, tout fonctionne sauf l'IA et les réseaux : paiement en **simulation** de développement (`PAY_MODE=simulate`, interdit en production), réseaux affichés « bientôt disponible » (saisie manuelle des chiffres possible).
 
 ### Scripts de lancement (installent les dépendances, créent `.env`, démarrent le serveur)
 
@@ -32,7 +32,7 @@ Si Node 22+ manque, le script propose de l'installer (winget, Homebrew ou NodeSo
 
 ```bash
 node scripts/setup.js        # crée .env (TOKEN_KEY) ; ou : cp .env.example .env
-docker compose up --build    # http://localhost:3000, base SQLite dans le volume « manager-data »
+docker compose up --build    # http://localhost:3000, base SQLite dans le volume « manager-data » (nom gardé de l'ancien nom du projet, pour ne perdre aucune donnée)
 ```
 
 `docker-compose.yml` tourne en mode développement (paiement simulé possible). Pour un vrai déploiement : `NODE_ENV=production`, `APP_URL` en https, `PAY_MODE=fedapay` dans `.env`, derrière un proxy HTTPS.
@@ -54,7 +54,7 @@ docker compose up --build    # http://localhost:3000, base SQLite dans le volume
 | `PAY_MODE` | `simulate` (dev) ou `fedapay` (interdit : `simulate` en production) |
 | `FEDAPAY_SECRET_KEY`, `FEDAPAY_ENV`, `FEDAPAY_WEBHOOK_SECRET` | FedaPay (`sandbox` ou `live`) |
 | `PREMIUM_PRICE` | Prix en FCFA (5000) |
-| `TIKTOK_CLIENT_KEY/SECRET`, `INSTAGRAM_CLIENT_ID/SECRET`, `YOUTUBE_CLIENT_ID/SECRET` | Un réseau sans clé reste en mode démo |
+| `TIKTOK_CLIENT_KEY/SECRET`, `INSTAGRAM_CLIENT_ID/SECRET`, `YOUTUBE_CLIENT_ID/SECRET` | Un réseau sans clé s'affiche « bientôt disponible » |
 
 Les adresses des API externes se changent aussi par variable (`*_BASE`, `*_AUTH_URL`), utile pour les tests.
 
@@ -87,7 +87,7 @@ Tout ce qui touche un service externe a été testé **contre des faux serveurs 
 
 ## Déploiement
 
-Docker : voir plus haut (`docker compose`), ou `docker build -t manager . && docker run -p 3000:3000 -v manager-data:/data --env-file .env manager`.
+Docker : voir plus haut (`docker compose`), ou `docker build -t synthia . && docker run -p 3000:3000 -v manager-data:/data --env-file .env synthia`.
 Mettre un proxy HTTPS devant (le cookie de session est `Secure` en production, `trust proxy` est activé).
 Une seule instance : la base est un fichier SQLite et la limitation de débit est en mémoire.
 
@@ -102,3 +102,15 @@ Mots de passe scrypt, sessions à jeton aléatoire (seul le hachage est en base)
 - Pas de réinitialisation de mot de passe par e-mail, pas de suppression de compte en libre-service, pas de vérification d'e-mail.
 - Synchronisation : le dernier appareil qui écrit gagne (pas de fusion).
 - Les invités n'ont que l'offre FREE ; le paiement exige un compte.
+
+
+## Synthia (ex-Manager) : nom, thème, fonctions
+
+Détails et décisions : `DESIGN-SYNTHIA.md`.
+
+- **Nom** : Synthia (se prononce comme Cynthia ; « synth » + « IA »). Le projet s'appelait Manager.
+  Gardés volontairement pour ne rien casser : le fichier de base par défaut `data/manager.db`, le volume Docker `manager-data`, les clés `mgr:*` du navigateur et les sauvegardes `manager-*.db`.
+- **Thème** : automatique (système), clair ou sombre, bouton dans le menu, l'en-tête et Paramètres. `node scripts/check-contrast.js` vérifie les contrastes WCAG des deux thèmes.
+- **Fonctions** : export du plan vers l'agenda (.ics), partage WhatsApp, texte d'action modifiable, démarrage guidé, page Aide, changement de mot de passe, déconnexion de tous les appareils, écran de secours et bandeau hors ligne.
+- **Retiré** : artiste d'exemple, mode démo, faux comptes de réseaux sociaux, délai artificiel.
+- `SUPPORT_EMAIL` : adresse de contact de la page Aide.

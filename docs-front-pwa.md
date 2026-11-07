@@ -1,5 +1,7 @@
 # Design : Manager v2 en PWA, avec bouton de mode et identité du pitch
 
+> Document historique (projet alors nommé Manager, palette violette). L'identité actuelle (Synthia, teal / orange / lime, thème clair / sombre) est dans `DESIGN-SYNTHIA.md`.
+
 ## Lecture de la demande
 
 - `Manager_v2.html` = la nouvelle base fonctionnelle de l'équipe (plan personnalisé, réseaux, bilan, PDF, paramètres).
