@@ -76,15 +76,15 @@ test('suppression : mot de passe exigé, tout part sauf les paiements (détaché
   assert.equal((await c.post('/api/me/delete', { password: 'motdepasse1' })).status, 200);
   const n = (t) => s.db.prepare(`SELECT COUNT(*) n FROM ${t}`).get().n;
   assert.deepEqual([n('users'), n('sessions'), n('user_state'), n('social_accounts'), n('email_tokens')], [0, 0, 0, 0, 0]);
-  const pay = s.db.prepare('SELECT user_id, amount FROM payments').get();
-  assert.deepEqual(pay, { user_id: null, amount: 5000 });
+  const pay = s.db.prepare('SELECT user_id, amount, currency FROM payments').get();
+  assert.deepEqual(pay, { user_id: null, amount: 5000, currency: 'XOF' }); // l’historique en FCFA reste tel quel
   assert.equal((await c.get('/api/me')).json.user, null);
   await s.close();
 });
 
 test('production : MAIL_MODE=console refusé', () => {
   const { loadConfig, validateConfig } = require('../server/config');
-  const errs = validateConfig(loadConfig({ NODE_ENV: 'production', APP_URL: 'https://m.example', PAY_MODE: 'fedapay', FEDAPAY_SECRET_KEY: 'k', TOKEN_KEY: Buffer.alloc(32).toString('base64') }));
+  const errs = validateConfig(loadConfig({ NODE_ENV: 'production', APP_URL: 'https://m.example', PAY_MODE: 'stripe', STRIPE_SECRET_KEY: 'sk_live_k', STRIPE_WEBHOOK_SECRET: 'w', TOKEN_KEY: Buffer.alloc(32).toString('base64') }));
   assert.ok(errs.some((e) => /MAIL_MODE/.test(e)));
 });
 
