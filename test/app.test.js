@@ -12,7 +12,7 @@ test('healthz, en-têtes de sécurité, front servi', async () => {
   assert.match(h.headers.get('content-security-policy'), /frame-ancestors 'none'/);
   const idx = await c.get('/');
   assert.equal(idx.status, 200);
-  assert.match(idx.text, /Manager/);
+  assert.match(idx.text, /Synthia/);
   await s.close();
 });
 
