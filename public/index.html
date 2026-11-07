@@ -454,11 +454,18 @@ useEffect(()=>{const k=e=>{if(e.key==='Escape')close()};window.addEventListener(
 return html`<div class=${'fixed inset-0 z-30 flex justify-center '+(pc?'items-center p-4':'items-end')} style=${{background:'rgba(0,0,0,.6)'}}><div class="card w-full max-w-md overflow-y-auto" role="alertdialog" aria-modal="true" aria-labelledby="cf-t" style=${pc?{borderRadius:'1.5rem',padding:'1.5rem',maxHeight:'90%'}:{borderRadius:'1.5rem 1.5rem 0 0',paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom,0px))',maxHeight:'90%'}}>
 <h2 id="cf-t" class="font-extrabold text-lg">${title}</h2><p class="text-sm mut mt-2">${text}</p>
 <div class="flex gap-2 mt-4"><button class="btn btn2 flex-1" onClick=${close}>${noLabel||'Annuler'}</button><button class="btn flex-1" onClick=${ok}>${okLabel}</button></div></div></div>`}
-function Reglages({ask,theme,setTheme,go}){const pc=useWide();
+function Reglages({ask,theme,setTheme,go,pal,setPal,custom,importTheme,removeCustom,themeBusy}){const pc=useWide();
 return html`<div><h1 class="text-2xl font-extrabold">Paramètres</h1><p class="mut text-sm mb-4">Compte, apparence et données.</p>
 <div class=${pc?'grid grid-cols-2 gap-4 items-start':'space-y-3'}>
 <${Compte}/>
-<div class="card"><h2 class="font-bold">Apparence</h2><p class="text-sm mut mt-1">Choisis le thème de l’application. « Automatique » suit le réglage de ton appareil.</p><div class="flex flex-wrap gap-2 mt-3" role="radiogroup" aria-label="Thème">${['auto','light','dark'].map(k=>html`<button type="button" key=${k} role="radio" aria-checked=${theme===k} class=${'chip inline-flex items-center gap-1.5 '+(theme===k?'on':'')} onClick=${()=>setTheme(k)}><${I} n=${TH[k][1]} s=${14}/>${TH[k][0]}</button>`)}</div></div>
+<div class="card"><h2 class="font-bold">Apparence</h2>
+<p class="text-sm font-medium mt-3">Mode</p><div class="flex flex-wrap gap-2 mt-1" role="radiogroup" aria-label="Mode">${['auto','light','dark'].map(k=>html`<button type="button" key=${k} role="radio" aria-checked=${theme===k} class=${'chip inline-flex items-center gap-1.5 '+(theme===k?'on':'')} onClick=${()=>setTheme(k)}><${I} n=${TH[k][1]} s=${14}/>${TH[k][0]}</button>`)}</div>
+<p class="text-xs mut mt-1">« Automatique » suit le réglage de ton appareil.</p>
+<p class="text-sm font-medium mt-4">Palette</p><div class="flex flex-wrap gap-2 mt-1" role="radiogroup" aria-label="Palette">${[['violet','Violet','linear-gradient(135deg,#7C3AED,#C026D3)'],['teal','Teal','linear-gradient(135deg,#0F766E,#EA580C)'],...(custom?[['custom','Personnalisée','linear-gradient(135deg,'+custom.sw[0]+','+custom.sw[1]+')']]:[])].map(([k,l,g])=>html`<button type="button" key=${k} role="radio" aria-checked=${pal===k} class=${'chip inline-flex items-center gap-2 '+(pal===k?'on':'')} onClick=${()=>setPal(k)}><span class="inline-block w-3.5 h-3.5 rounded-full" style=${{background:g,border:'1px solid rgba(255,255,255,.5)'}} aria-hidden="true"></span>${l}</button>`)}</div>
+<div class="mt-4 rounded-xl p-3" style=${{background:'var(--bg)'}}><p class="text-sm font-medium">Ton propre thème</p><p class="text-xs mut mt-1">Choisis une image ou une vidéo : les couleurs de Synthia s’en inspirent, et les textes restent toujours lisibles. Le fichier est lu sur ton appareil, il n’est pas envoyé et pas gardé.</p>
+<input id="theme-file" type="file" accept="image/*,video/*" class="sr-only" aria-label="Importer une image ou une vidéo pour le thème" onChange=${e=>{const f=e.target.files&&e.target.files[0];e.target.value='';importTheme(f)}}/>
+<div class="flex flex-wrap items-center gap-2 mt-3"><button type="button" class="btn" disabled=${themeBusy} onClick=${()=>document.getElementById('theme-file').click()}>${themeBusy?'Analyse en cours…':'Importer une image ou une vidéo'}</button>${custom&&html`<button type="button" class="chip" onClick=${removeCustom}>Retirer mon thème</button>`}</div>
+${custom&&html`<div class="flex items-center gap-3 mt-3" aria-label="Aperçu du thème personnalisé">${custom.thumb&&html`<img src=${custom.thumb} alt="Image de ton thème" class="w-16 h-10 object-cover rounded-lg"/>`}<div class="flex gap-1.5" aria-hidden="true">${custom.sw.map((c,i)=>html`<span key=${i} class="w-6 h-6 rounded-full" style=${{background:c,border:'1px solid var(--bd)'}}></span>`)}</div>${custom.gray&&html`<span class="text-xs mut">Image presque grise : palette sobre</span>`}</div>`}</div></div>
 <div class="card"><h2 class="font-bold">Aide et contact</h2><p class="text-sm mut mt-1">Questions fréquentes, contact et informations légales.</p><button class="btn btn2 mt-3" onClick=${()=>go('aide')}><${I} n="help" s=${18}/> Ouvrir l’aide</button></div>
 <div class="card"><h2 class="font-bold">Mes données</h2><p class="text-sm mut mt-1">Efface ton profil, ton audience, ton plan, tes actions cochées, tes résultats et tes anciennes campagnes pour repartir d’un profil vide. Ton compte et ton offre ne sont pas touchés.</p><button class="btn btn2 mt-3" onClick=${()=>ask('reset')}><${I} n="reset" s=${18}/> Repartir de zéro</button></div></div></div>`}
 
@@ -492,6 +499,29 @@ return {'--bg':bg,'--card':card,'--stg':dark?hsl(H,50,4):hsl(H,40,93),'--bd':dar
 '--art1':hsl(H,s,50),'--art2':hsl(H,70,90),'--art3':hsl(H2,s,45),'--art4':hsl(H2,80,75),'--eq1':hsl(H,80,72),'--eq2':hsl(H2,80,70),'--ring':hsl(H2,85,70),
 '--toast':hsl(H,45,12),'--bar1':hsl(H,s,55),'--bar2':hsl(H,s,35)}}
 const buildPalettes=t=>({light:palOf(t.H,t.S,t.H2,false),dark:palOf(t.H,t.S,t.H2,true),sw:[palOf(t.H,t.S,t.H2,false)['--pri'],palOf(t.H,t.S,t.H2,false)['--pri2'],palOf(t.H,t.S,t.H2,true)['--ac'],palOf(t.H,t.S,t.H2,true)['--bg']],gray:!!t.gray});
+
+/* Lecture d'un fichier choisi : image, ou image d'une vidéo (à la moitié de sa durée, 1 s au plus). Le fichier n'est ni envoyé ni gardé. */
+async function loadMedia(file){const T=/^(image|video)\//.exec(file&&file.type||'');
+if(!T)throw new Error('Choisis une image ou une vidéo.');
+const url=URL.createObjectURL(file),done=()=>URL.revokeObjectURL(url);
+try{
+if(T[1]==='image'){if(file.size>15e6)throw new Error('Image trop lourde (15 Mo maximum).');
+const img=new Image();img.src=url;try{await img.decode()}catch(e){throw new Error('Impossible de lire cette image.')}
+return {el:img,w:img.naturalWidth,h:img.naturalHeight,done}}
+if(file.size>80e6)throw new Error('Vidéo trop lourde (80 Mo maximum).');
+const v=document.createElement('video');v.muted=true;v.playsInline=true;v.preload='auto';v.src=url;
+await new Promise((ok,ko)=>{const t=setTimeout(()=>ko(new Error('Vidéo trop longue à charger ou illisible.')),10000);
+v.onerror=()=>{clearTimeout(t);ko(new Error('Impossible de lire cette vidéo.'))};
+v.onloadedmetadata=()=>{v.currentTime=isFinite(v.duration)?Math.min(1,v.duration/2)||.1:.1};
+v.onseeked=()=>{clearTimeout(t);ok()}});
+return {el:v,w:v.videoWidth,h:v.videoHeight,done}
+}catch(e){done();throw e}}
+async function themeFromFile(file){const m=await loadMedia(file);
+try{const {w,h}=m;if(!w||!h)throw new Error('Impossible de lire ce fichier.');
+const c=document.createElement('canvas');c.width=48;c.height=48;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(m.el,0,0,48,48);
+const t=hues(x.getImageData(0,0,48,48).data),tw=Math.min(640,w),tc=document.createElement('canvas');tc.width=tw;tc.height=Math.max(1,Math.round(h*tw/w));tc.getContext('2d').drawImage(m.el,0,0,tc.width,tc.height);
+let thumb=null;try{thumb=tc.toDataURL('image/jpeg',.7)}catch(e){}
+return {...buildPalettes(t),thumb}}finally{m.done()}}
 
 /* ---------- Aide ---------- */
 const FAQ=[
@@ -582,6 +612,17 @@ useEffect(()=>{const on=()=>setOnline(true),off=()=>setOnline(false);window.addE
 const [theme,setThemeS]=useState(()=>window.__theme());
 const setTheme=t=>{setThemeS(t);try{if(t==='auto')localStorage.removeItem('pwa-theme');else localStorage.setItem('pwa-theme',t)}catch(e){}window.__applyTheme(t)};
 const cycle=()=>setTheme(TH_NEXT[theme]);
+const rd=(k,d)=>{try{return localStorage.getItem(k)||d}catch(e){return d}};
+const [custom,setCustom]=useState(()=>{try{return JSON.parse(rd('pwa-custom','null'))}catch(e){return null}}),[pal,setPalS]=useState(()=>{const p=rd('pwa-pal','violet');return p==='teal'||(p==='custom'&&rd('pwa-custom',null))?p:'violet'}),[themeBusy,setThemeBusy]=useState(false);
+const setPal=p=>{setPalS(p);try{localStorage.setItem('pwa-pal',p)}catch(e){}window.__applyTheme(theme)};
+const importTheme=async f=>{if(!f)return;setThemeBusy(true);
+try{const t=await themeFromFile(f);let saved=false;
+for(const v of [t,{...t,thumb:null}]){try{localStorage.setItem('pwa-custom',JSON.stringify(v));saved=true;setCustom(v);break}catch(e){}}
+if(!saved){say('Espace de stockage plein : thème non enregistré');return}
+setPalS('custom');try{localStorage.setItem('pwa-pal','custom')}catch(e){}window.__applyTheme(theme);
+say(t.gray?'Image presque grise : thème sobre créé ✓':'Thème créé à partir de ton fichier ✓')}
+catch(e){say(e&&e.message||'Impossible de créer le thème')}finally{setThemeBusy(false)}};
+const removeCustom=()=>{try{localStorage.removeItem('pwa-custom');localStorage.setItem('pwa-pal','violet')}catch(e){}setCustom(null);setPalS('violet');window.__applyTheme(theme);say('Thème personnalisé retiré')};
 const wide=view==='pc',framed=view==='mobile'&&vw>=600,toggle=()=>setView(wide?'mobile':'pc');
 const install=async()=>{const e=window.__dp;if(!e)return;e.prompt();try{await e.userChoice}catch(x){}window.__dp=null;setDp(null)};
 useEffect(()=>{const f=()=>setVw(window.innerWidth);window.addEventListener('resize',f);return()=>window.removeEventListener('resize',f)},[]);
@@ -648,7 +689,7 @@ suivi:html`<${Suivi} res=${res} setRes=${setRes} wk=${wk} setWk=${setWk} go=${go
 bilan:html`<${Bilan} plan=${plan} done=${done} res=${res} prof=${prof} offer=${offer} go=${go} setWk=${setWk} newC=${()=>setConf('new')}/>`,
 offres:html`<${Offres} offer=${offer} buy=${buy}/>`,
 aide:html`<${Aide} go=${go}/>`,
-reglages:html`<${Reglages} ask=${setConf} theme=${theme} setTheme=${setTheme} go=${go}/>`}[page];
+reglages:html`<${Reglages} ask=${setConf} theme=${theme} setTheme=${setTheme} go=${go} pal=${pal} setPal=${setPal} custom=${custom} importTheme=${importTheme} removeCustom=${removeCustom} themeBusy=${themeBusy}/>`}[page];
 const bodyB=html`<${Boundary} key=${page}>${body}<//>`;
 const CF={new:{title:'Lancer une nouvelle campagne ?',text:offer==='PREMIUM'?'Ta campagne actuelle est gardée dans « Mes autres plans », avec ses résultats et son bilan. Tu pourras la rouvrir à tout moment. Tu vas saisir les informations de ton nouveau morceau.':'Avec l’offre FREE, le nouveau plan remplace l’actuel : son suivi et son bilan ne seront plus accessibles. PREMIUM permet de garder tes anciennes campagnes. Tu vas saisir les informations de ton nouveau morceau.',okLabel:'Lancer la campagne',ok:newCamp},pdf:{title:'Le PDF complet est réservé à PREMIUM',text:'Avec l’offre FREE, tu consultes ton plan de promotion directement dans Synthia. Passe à PREMIUM pour télécharger ton plan complet (morceau, objectifs, actions et calendrier sur 4 semaines) au format PDF.',okLabel:'Voir PREMIUM',no:'Fermer',ok:()=>{setConf(null);go('offres')}},regen:{title:'Régénérer le plan ?',text:'Tu as modifié des textes. En régénérant, ils seront remplacés par de nouveaux textes et tes actions cochées seront réinitialisées.',okLabel:'Régénérer',ok:()=>{setConf(null);gen()}},reset:{title:'Repartir de zéro ?',text:'Ton profil, ton audience, ton plan, les actions cochées, tes résultats et tes campagnes gardées seront effacés'+(user?', sur cet appareil et dans ton compte (ton compte et ton offre restent)':' de ce navigateur')+'. Cette action est définitive.',okLabel:'Oui, tout effacer',ok:resetAll}};
 const overlays=html`<${React.Fragment}>${!online&&html`<div class="fixed top-0 inset-x-0 z-40 text-center text-xs py-1.5 px-3 text-white" style=${{background:'#9A3412'}} role="status">Hors ligne : tes saisies sont gardées sur cet appareil et seront envoyées au retour de la connexion.</div>`}${imp&&html`<${Confirm} title="Importer tes données ?" text="Ce navigateur contient déjà un profil ou un plan. Veux-tu les enregistrer dans ton compte pour les retrouver partout ?" okLabel="Importer" noLabel="Plus tard" ok=${doImport} close=${()=>setImp(false)}/>`}${conf&&html`<${Confirm} title=${CF[conf].title} text=${CF[conf].text} okLabel=${CF[conf].okLabel} ok=${CF[conf].ok} noLabel=${CF[conf].no} close=${()=>setConf(null)}/>`}${wkEnd&&!conf&&html`<${Confirm} title=${'Semaine '+wkEnd+' terminée 🎉'} text=${'Tu as terminé toutes les actions de la semaine '+wkEnd+'. Renseigne maintenant les résultats obtenus (vues, écoutes, abonnés, interactions) pour que Synthia les compare à tes objectifs.'} okLabel="Saisir mes résultats" noLabel="Plus tard" ok=${()=>{const w=wkEnd;setWkEnd(null);setWk(w);go('suivi')}} close=${()=>setWkEnd(null)}/>`}${toast&&html`<div class="fixed left-1/2 -translate-x-1/2 z-40 px-4 py-2 rounded-full text-sm text-white max-w-[90%] text-center" style=${{bottom:'calc('+(wide?'2rem':'5rem')+' + env(safe-area-inset-bottom,0px))',background:'var(--toast)'}} role="status">${toast}</div>`}<//>`;
