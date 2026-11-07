@@ -23,7 +23,7 @@ function mount(deps, overrides = {}) {
     delOtherSessions: db.prepare('DELETE FROM sessions WHERE user_id = ? AND token_hash != ?'),
     delUser: db.prepare('DELETE FROM users WHERE id = ?'),
     state: db.prepare('SELECT key, json FROM user_state WHERE user_id = ?'),
-    pays: db.prepare('SELECT offer, amount, provider, status, created_at, paid_at FROM payments WHERE user_id = ? ORDER BY id'),
+    pays: db.prepare('SELECT offer, amount, currency, provider, status, created_at, paid_at FROM payments WHERE user_id = ? ORDER BY id'),
     socials: db.prepare('SELECT platform, name, status, last_sync FROM social_accounts WHERE user_id = ?'),
     snaps: db.prepare('SELECT platform, taken_at, f, v, l, p FROM social_snapshots WHERE user_id = ? ORDER BY taken_at'),
   };

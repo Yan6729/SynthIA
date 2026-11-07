@@ -8,7 +8,9 @@ function mount(deps) {
         ai: Object.entries(cfg.ai.providers).filter(([, p]) => p.key).map(([k]) => k),
         aiDefault: cfg.ai.default,
         payMode: cfg.pay.mode,
-        price: cfg.pay.price,
+        price: cfg.pay.price, // en cents
+        currency: cfg.pay.currency,
+        payDays: cfg.pay.days,
         support: cfg.supportEmail || null,
         social: cfg.tokenKey ? Object.entries(cfg.social).filter(([, p]) => p.id && p.secret).map(([k]) => k) : [],
       };

@@ -2,6 +2,8 @@
 const path = require('path');
 
 const int = (v, d) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : d; };
+/* Prix en dollars (« 9 » ou « 9.99 ») → cents. Stripe exige au moins 0,50 $. */
+const cents = (v, d) => { const n = Math.round(parseFloat(v) * 100); return Number.isFinite(n) && n >= 50 && n <= 1000000 ? n : d; };
 
 function loadConfig(env = process.env) {
   const prod = env.NODE_ENV === 'production';
@@ -29,9 +31,10 @@ function loadConfig(env = process.env) {
     },
     pay: {
       mode: env.PAY_MODE || 'simulate',
-      price: int(env.PREMIUM_PRICE, 5000),
+      currency: 'USD',
+      price: cents(env.PREMIUM_PRICE_USD, 900), // en cents : 900 = 9,00 $
       days: 30,
-      fedapay: { key: env.FEDAPAY_SECRET_KEY, env: env.FEDAPAY_ENV || 'sandbox', webhookSecret: env.FEDAPAY_WEBHOOK_SECRET },
+      stripe: { key: env.STRIPE_SECRET_KEY, webhookSecret: env.STRIPE_WEBHOOK_SECRET },
     },
     social: {
       tiktok: { id: env.TIKTOK_CLIENT_KEY, secret: env.TIKTOK_CLIENT_SECRET, base: env.TIKTOK_BASE || 'https://open.tiktokapis.com', authUrl: env.TIKTOK_AUTH_URL || 'https://www.tiktok.com/v2/auth/authorize/' },
@@ -51,7 +54,10 @@ function validateConfig(cfg) {
     if (!cfg.appUrl.startsWith('https://')) errs.push('APP_URL doit être en https en production');
   }
   if (cfg.tokenKey && Buffer.from(cfg.tokenKey, 'base64').length !== 32) errs.push('TOKEN_KEY doit faire 32 octets (base64)');
-  if (cfg.pay.mode === 'fedapay' && !cfg.pay.fedapay.key) errs.push('FEDAPAY_SECRET_KEY manquant (PAY_MODE=fedapay)');
+  if (cfg.pay.mode === 'stripe' && !cfg.pay.stripe.key) errs.push('STRIPE_SECRET_KEY manquant (PAY_MODE=stripe)');
+  if (cfg.pay.mode === 'stripe' && cfg.prod && !cfg.pay.stripe.webhookSecret) errs.push('STRIPE_WEBHOOK_SECRET manquant : sans webhook, un paiement validé après la fermeture de la page ne serait jamais pris en compte');
+  if (cfg.pay.mode === 'stripe' && cfg.prod && /^sk_test_/.test(cfg.pay.stripe.key || '')) errs.push('STRIPE_SECRET_KEY est une clé de test (sk_test_) : en production, utilise la clé live');
+  if (!['simulate', 'stripe'].includes(cfg.pay.mode)) errs.push(`PAY_MODE inconnu : ${cfg.pay.mode} (simulate ou stripe)`);
   return errs;
 }
 

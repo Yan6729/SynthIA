@@ -95,6 +95,8 @@ const MIGRATIONS = [
    DROP TABLE payments;
    ALTER TABLE payments_new RENAME TO payments;
    CREATE UNIQUE INDEX payments_tx ON payments(provider, provider_tx) WHERE provider_tx IS NOT NULL;`,
+  // 7 : devise des paiements. L'historique est en FCFA (fedapay), les nouveaux paiements sont en dollars ; rien n'est converti.
+  `ALTER TABLE payments ADD COLUMN currency TEXT NOT NULL DEFAULT 'XOF';`,
 ];
 
 function openDb(file) {

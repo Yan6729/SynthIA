@@ -1,7 +1,7 @@
 'use strict';
 const express = require('express');
 const { wrap } = require('../http');
-const { createFedaPayClient } = require('./fedapay');
+const { createStripeClient } = require('./stripe');
 const { createSimulateClient } = require('./simulate');
 
 const PAID = new Set(['approved', 'transferred']);
@@ -9,11 +9,11 @@ const DAY = 86400000;
 
 function mount(deps, overrides = {}) {
   const { cfg, db } = deps;
-  const client = overrides.pay || (cfg.pay.mode === 'fedapay' ? createFedaPayClient(cfg) : createSimulateClient(cfg));
+  const client = overrides.pay || (cfg.pay.mode === 'stripe' ? createStripeClient(cfg) : createSimulateClient(cfg));
   deps.pay = client;
 
   const q = {
-    insert: db.prepare('INSERT INTO payments (user_id, offer, amount, provider, status, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
+    insert: db.prepare('INSERT INTO payments (user_id, offer, amount, currency, provider, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'),
     setTx: db.prepare('UPDATE payments SET provider_tx = ? WHERE id = ?'),
     byId: db.prepare('SELECT * FROM payments WHERE id = ?'),
     byTx: db.prepare('SELECT * FROM payments WHERE provider = ? AND provider_tx = ?'),
@@ -28,7 +28,7 @@ function mount(deps, overrides = {}) {
     if (payment.status === 'approved') return 'approved';
     const tx = await client.getTransaction(payment.provider_tx);
     if (PAID.has(tx.status)) {
-      if (tx.amount !== payment.amount) { console.error('[paiement] montant inattendu', payment.id, tx.amount); q.setStatus.run('mismatch', payment.id); return 'mismatch'; }
+      if (tx.amount !== payment.amount || (tx.currency && tx.currency !== payment.currency)) { console.error('[paiement] montant ou devise inattendus', payment.id, tx.amount, tx.currency); q.setStatus.run('mismatch', payment.id); return 'mismatch'; }
       db.transaction(() => {
         const r = q.approve.run(Date.now(), payment.id);
         if (r.changes === 0) return false; // déjà traité (retour + webhook en parallèle)
@@ -47,11 +47,11 @@ function mount(deps, overrides = {}) {
   deps.rawMounts.push((app) => {
     app.post('/api/pay/webhook', express.raw({ type: '*/*', limit: '100kb' }), wrap(async (req, res) => {
       let ev;
-      try { ev = client.parseWebhook(req.body, req.headers['x-fedapay-signature']); } catch (e) { return res.status(400).json({ error: 'signature_invalide' }); }
+      try { ev = client.parseWebhook(req.body, req.headers['stripe-signature']); } catch (e) { return res.status(400).json({ error: 'signature_invalide' }); }
       if (!ev.txId) return res.status(200).json({ ignored: true });
       const p = q.byTx.get(client.mode, ev.txId);
       if (!p) return res.status(200).json({ ignored: true }); // transaction qui n'est pas la nôtre
-      try { await settle(p); } catch (e) { console.error('[paiement] webhook', e.message); return res.status(500).json({ error: 'verification_impossible' }); } // FedaPay réessaiera
+      try { await settle(p); } catch (e) { console.error('[paiement] webhook', e.message); return res.status(500).json({ error: 'verification_impossible' }); } // Stripe réessaiera
       res.json({ ok: true });
     }));
   });
@@ -60,11 +60,11 @@ function mount(deps, overrides = {}) {
     app.post('/api/pay/checkout', deps.requireUser, wrap(async (req, res) => {
       if (req.body?.offer !== 'PREMIUM') return res.status(400).json({ error: 'offre_inconnue' });
       const amount = cfg.pay.price;
-      const id = q.insert.run(req.user.id, 'PREMIUM', amount, client.mode, 'pending', Date.now()).lastInsertRowid;
+      const id = q.insert.run(req.user.id, 'PREMIUM', amount, cfg.pay.currency, client.mode, 'pending', Date.now()).lastInsertRowid;
       try {
         const out = await client.createCheckout({
-          amount, description: 'Synthia PREMIUM (30 jours)', email: req.user.email,
-          callbackUrl: `${cfg.appUrl}/api/pay/return?p=${id}`,
+          amount, currency: cfg.pay.currency, description: `Synthia PREMIUM (${cfg.pay.days} days)`, email: req.user.email, ref: Number(id),
+          callbackUrl: `${cfg.appUrl}/api/pay/return?p=${id}`, cancelUrl: `${cfg.appUrl}/?paid=failed`,
         });
         q.setTx.run(out.txId, id);
         res.json({ url: out.url, paymentId: Number(id) });
@@ -95,7 +95,7 @@ function mount(deps, overrides = {}) {
         if (!t) return res.status(404).send('Transaction inconnue');
         res.type('html').send(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Paiement (simulation)</title>
 <body style="font-family:system-ui;max-width:380px;margin:12vh auto;padding:0 16px;text-align:center">
-<h1 style="font-size:20px">Paiement simulé</h1><p>Synthia PREMIUM, <b>${Number(t.amount)} FCFA</b></p>
+<h1 style="font-size:20px">Paiement simulé</h1><p>Synthia PREMIUM, <b>$${(Number(t.amount) / 100).toFixed(2)}</b></p>
 <p style="font-size:13px;color:#666">Mode développement : aucun argent n’est débité.</p>
 <form method="post" action="/api/pay/simulate/${encodeURIComponent(req.params.tx)}/decide" style="display:grid;gap:8px;margin-top:20px">
 <button name="status" value="approved" style="padding:12px;font-size:16px">Payer</button>
