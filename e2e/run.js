@@ -214,6 +214,38 @@ function fakeWorld() {
   assert.equal(await page.evaluate(() => localStorage.getItem('pwa-custom')), null);
   step('thème personnalisé retiré, retour au violet');
 
+  // 6c3. police : système par défaut, Google Fonts au choix (réseau simulé), nom invalide et police inconnue refusés, mémorisée
+  const gfReq = [];
+  await page.route('https://fonts.googleapis.com/**', (r) => { const u = r.request().url(); gfReq.push(u); return r.fulfill(/Police\+Inconnue/.test(u) ? { status: 400, contentType: 'text/plain', body: 'nope' } : { status: 200, contentType: 'text/css', body: '/* police simulée */' }); });
+  assert.equal(await page.evaluate(() => document.getElementById('gfont')), null); // rien chargé par défaut
+  assert.equal(gfReq.length, 0);
+  await page.getByRole('radio', { name: 'Poppins' }).click();
+  await page.waitForFunction(() => localStorage.getItem('pwa-font') === 'Poppins');
+  assert.match(await page.evaluate(() => document.documentElement.style.getPropertyValue('--font')), /^"Poppins",/);
+  assert.match(await page.evaluate(() => document.getElementById('gfont').getAttribute('href')), /family=Poppins:wght@400;500;600;700&display=swap$/);
+  assert.match(await page.evaluate(() => getComputedStyle(document.body).fontFamily), /Poppins/);
+  await page.getByLabel('Autre police Google Fonts').fill('bebas neue');
+  await page.getByRole('button', { name: 'Utiliser' }).click();
+  await page.waitForFunction(() => localStorage.getItem('pwa-font') === 'Bebas Neue');
+  await page.getByLabel('Autre police Google Fonts').fill('Police Inconnue');
+  await page.getByRole('button', { name: 'Utiliser' }).click();
+  await text('Police introuvable').waitFor();
+  assert.equal(await page.evaluate(() => localStorage.getItem('pwa-font')), 'Bebas Neue'); // l'ancienne reste
+  await page.getByLabel('Autre police Google Fonts').fill('a;b');
+  await page.getByRole('button', { name: 'Utiliser' }).click();
+  await text('Nom de police invalide').waitFor();
+  await page.evaluate(() => localStorage.setItem('pwa-font', 'x"};body{display:none'));
+  await page.reload();
+  assert.equal(await page.evaluate(() => document.getElementById('gfont')), null); // valeur piégée ignorée
+  await page.evaluate(() => localStorage.setItem('pwa-font', 'Bebas Neue'));
+  await page.reload();
+  assert.match(await page.evaluate(() => document.documentElement.style.getPropertyValue('--font')), /^"Bebas Neue",/);
+  await page.getByRole('button', { name: 'Paramètres' }).first().click();
+  await page.getByRole('radio', { name: 'Système' }).click();
+  assert.equal(await page.evaluate(() => [localStorage.getItem('pwa-font'), document.getElementById('gfont'), document.documentElement.style.getPropertyValue('--font')].join('|')), '||');
+  await page.unroute('https://fonts.googleapis.com/**');
+  step('police : système par défaut, Google Fonts au choix, entrées piégées refusées, retour au système');
+
   // 6d. hors ligne : bandeau, puis retour
   await ctx.setOffline(true);
   await text('Hors ligne').waitFor();

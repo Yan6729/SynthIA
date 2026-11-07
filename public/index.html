@@ -35,7 +35,7 @@ if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostnam
 html{scroll-padding-top:env(safe-area-inset-top,0px);color-scheme:light dark}
 :root[data-theme="light"]{color-scheme:light}
 :root[data-theme="dark"]{color-scheme:dark}
-body{margin:0;background:var(--bg);color:var(--tx);font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--font,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif)}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:1.25rem;padding:1rem}
 .mut{color:var(--mut)}
 .pt{color:var(--pt)}
@@ -87,6 +87,13 @@ if(p==='custom'&&c&&c.light&&c.dark){var t=r.getAttribute('data-theme'),d=t==='d
 window.__applyTheme=function(t){var r=document.documentElement;if(t==='light'||t==='dark')r.setAttribute('data-theme',t);else r.removeAttribute('data-theme');window.__applyPal();var c=(getComputedStyle(r).getPropertyValue('--meta')||'').trim()||'#0B0816';document.querySelectorAll('meta[name=theme-color]').forEach(function(m){m.setAttribute('content',c);m.removeAttribute('media')})};
 window.__theme=function(){try{var v=localStorage.getItem('pwa-theme');return v==='light'||v==='dark'?v:'auto'}catch(e){return 'auto'}};
 window.__applyTheme(window.__theme());
+/* Police : système par défaut. Une police Google Fonts n'est chargée que si l'utilisateur l'a choisie (pwa-font). */
+window.__fontOk=function(n){return typeof n==='string'&&/^[A-Za-z0-9 ]{2,40}$/.test(n)&&n.trim()===n};
+window.__fontUrl=function(n){return 'https://fonts.googleapis.com/css2?family='+n.replace(/ /g,'+')+':wght@400;500;600;700&display=swap'};
+window.__applyFont=function(){var n=null,r=document.documentElement,l=document.getElementById('gfont');try{n=localStorage.getItem('pwa-font')}catch(e){}
+if(window.__fontOk(n)){if(!l){l=document.createElement('link');l.id='gfont';l.rel='stylesheet';document.head.appendChild(l)}var u=window.__fontUrl(n);if(l.getAttribute('href')!==u)l.setAttribute('href',u);r.style.setProperty('--font','"'+n+'",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif')}
+else{if(l)l.parentNode.removeChild(l);r.style.removeProperty('--font')}};
+window.__applyFont();
 if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener('change',function(){window.__applyTheme(window.__theme())});
 </script>
 </head>
@@ -454,7 +461,14 @@ useEffect(()=>{const k=e=>{if(e.key==='Escape')close()};window.addEventListener(
 return html`<div class=${'fixed inset-0 z-30 flex justify-center '+(pc?'items-center p-4':'items-end')} style=${{background:'rgba(0,0,0,.6)'}}><div class="card w-full max-w-md overflow-y-auto" role="alertdialog" aria-modal="true" aria-labelledby="cf-t" style=${pc?{borderRadius:'1.5rem',padding:'1.5rem',maxHeight:'90%'}:{borderRadius:'1.5rem 1.5rem 0 0',paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom,0px))',maxHeight:'90%'}}>
 <h2 id="cf-t" class="font-extrabold text-lg">${title}</h2><p class="text-sm mut mt-2">${text}</p>
 <div class="flex gap-2 mt-4"><button class="btn btn2 flex-1" onClick=${close}>${noLabel||'Annuler'}</button><button class="btn flex-1" onClick=${ok}>${okLabel}</button></div></div></div>`}
-function Reglages({ask,theme,setTheme,go,pal,setPal,custom,importTheme,removeCustom,themeBusy}){const pc=useWide();
+const FONTS=['Inter','DM Sans','Poppins','Manrope','Nunito','Montserrat','Space Grotesk','Sora','Outfit','Playfair Display','Lora','Merriweather','Fraunces','JetBrains Mono'];
+const fontName=v=>String(v||'').trim().replace(/\s+/g,' ').replace(/(^|\s)([a-z])/g,(m,a,b)=>a+b.toUpperCase());
+/* Vérifie qu'une police existe chez Google Fonts : la feuille de style doit se charger (sinon Google répond 400). */
+const probeFont=n=>new Promise((ok,ko)=>{if(!window.__fontOk(n))return ko(new Error('Nom de police invalide : lettres, chiffres et espaces seulement'));
+const l=document.createElement('link');l.rel='stylesheet';l.href=window.__fontUrl(n);
+const to=setTimeout(()=>{l.remove();ko(new Error('Police introuvable ou connexion trop lente'))},8000);
+l.onload=()=>{clearTimeout(to);ok(l)};l.onerror=()=>{clearTimeout(to);l.remove();ko(new Error('Police introuvable chez Google Fonts, ou pas de connexion'))};document.head.appendChild(l)});
+function Reglages({ask,theme,setTheme,go,pal,setPal,custom,importTheme,removeCustom,themeBusy,font,setFont,fontBusy}){const pc=useWide();const [fq,setFq]=useState('');
 return html`<div><h1 class="text-2xl font-extrabold">Paramètres</h1><p class="mut text-sm mb-4">Compte, apparence et données.</p>
 <div class=${pc?'grid grid-cols-2 gap-4 items-start':'space-y-3'}>
 <${Compte}/>
@@ -465,7 +479,12 @@ return html`<div><h1 class="text-2xl font-extrabold">Paramètres</h1><p class="m
 <div class="mt-4 rounded-xl p-3" style=${{background:'var(--bg)'}}><p class="text-sm font-medium">Ton propre thème</p><p class="text-xs mut mt-1">Choisis une image ou une vidéo : les couleurs de Synthia s’en inspirent, et les textes restent toujours lisibles. Le fichier est lu sur ton appareil, il n’est pas envoyé et pas gardé.</p>
 <input id="theme-file" type="file" accept="image/*,video/*" class="sr-only" aria-label="Importer une image ou une vidéo pour le thème" onChange=${e=>{const f=e.target.files&&e.target.files[0];e.target.value='';importTheme(f)}}/>
 <div class="flex flex-wrap items-center gap-2 mt-3"><button type="button" class="btn" disabled=${themeBusy} onClick=${()=>document.getElementById('theme-file').click()}>${themeBusy?'Analyse en cours…':'Importer une image ou une vidéo'}</button>${custom&&html`<button type="button" class="chip" onClick=${removeCustom}>Retirer mon thème</button>`}</div>
-${custom&&html`<div class="flex items-center gap-3 mt-3" aria-label="Aperçu du thème personnalisé">${custom.thumb&&html`<img src=${custom.thumb} alt="Image de ton thème" class="w-16 h-10 object-cover rounded-lg"/>`}<div class="flex gap-1.5" aria-hidden="true">${custom.sw.map((c,i)=>html`<span key=${i} class="w-6 h-6 rounded-full" style=${{background:c,border:'1px solid var(--bd)'}}></span>`)}</div>${custom.gray&&html`<span class="text-xs mut">Image presque grise : palette sobre</span>`}</div>`}</div></div>
+${custom&&html`<div class="flex items-center gap-3 mt-3" aria-label="Aperçu du thème personnalisé">${custom.thumb&&html`<img src=${custom.thumb} alt="Image de ton thème" class="w-16 h-10 object-cover rounded-lg"/>`}<div class="flex gap-1.5" aria-hidden="true">${custom.sw.map((c,i)=>html`<span key=${i} class="w-6 h-6 rounded-full" style=${{background:c,border:'1px solid var(--bd)'}}></span>`)}</div>${custom.gray&&html`<span class="text-xs mut">Image presque grise : palette sobre</span>`}</div>`}</div>
+<div class="mt-4"><p class="text-sm font-medium">Police</p>
+<div class="flex flex-wrap gap-2 mt-1" role="radiogroup" aria-label="Police">${[['','Système'],...FONTS.map(n=>[n,n]),...(font&&!FONTS.includes(font)?[[font,font]]:[])].map(([k,l])=>html`<button type="button" key=${k||'sys'} role="radio" aria-checked=${font===k} disabled=${fontBusy} class=${'chip '+(font===k?'on':'')} onClick=${()=>setFont(k)}>${l}</button>`)}</div>
+<form class="flex flex-wrap items-center gap-2 mt-3" onSubmit=${async e=>{e.preventDefault();const n=fontName(fq);if(!n)return;if(await setFont(n))setFq('')}}><label class="sr-only" for="font-q">Autre police Google Fonts</label><input id="font-q" class="inp" style=${{maxWidth:'15rem'}} placeholder="Autre police Google (ex. Bebas Neue)" value=${fq} onInput=${e=>setFq(e.target.value)} maxlength="40" autocomplete="off"/><button class="btn" type="submit" disabled=${fontBusy||!fq.trim()}>${fontBusy?'Chargement…':'Utiliser'}</button></form>
+<p class="text-xs mut mt-2">Toutes les polices de <a class="underline" href="https://fonts.google.com" target="_blank" rel="noopener noreferrer">Google Fonts</a> sont possibles : tape son nom exact. Choisir une police Google envoie l’adresse IP de ton appareil à Google. « Système » n’envoie rien.</p>
+<p id="font-demo" class="mt-2 rounded-xl p-3 text-sm" style=${{background:'var(--bg)'}}>Ta musique mérite d’être entendue. 0123456789</p></div></div>
 <div class="card"><h2 class="font-bold">Aide et contact</h2><p class="text-sm mut mt-1">Questions fréquentes, contact et informations légales.</p><button class="btn btn2 mt-3" onClick=${()=>go('aide')}><${I} n="help" s=${18}/> Ouvrir l’aide</button></div>
 <div class="card"><h2 class="font-bold">Mes données</h2><p class="text-sm mut mt-1">Efface ton profil, ton audience, ton plan, tes actions cochées, tes résultats et tes anciennes campagnes pour repartir d’un profil vide. Ton compte et ton offre ne sont pas touchés.</p><button class="btn btn2 mt-3" onClick=${()=>ask('reset')}><${I} n="reset" s=${18}/> Repartir de zéro</button></div></div></div>`}
 
@@ -622,6 +641,9 @@ if(!saved){say('Espace de stockage plein : thème non enregistré');return}
 setPalS('custom');try{localStorage.setItem('pwa-pal','custom')}catch(e){}window.__applyTheme(theme);
 say(t.gray?'Image presque grise : thème sobre créé ✓':'Thème créé à partir de ton fichier ✓')}
 catch(e){say(e&&e.message||'Impossible de créer le thème')}finally{setThemeBusy(false)}};
+const [font,setFontS]=useState(()=>{const f=rd('pwa-font','');return window.__fontOk(f)?f:''}),[fontBusy,setFontBusy]=useState(false);
+const setFont=async n=>{if(!n){try{localStorage.removeItem('pwa-font')}catch(e){}setFontS('');window.__applyFont();return true}
+setFontBusy(true);try{const l=await probeFont(n);l.remove();try{localStorage.setItem('pwa-font',n)}catch(e){}setFontS(n);window.__applyFont();return true}catch(e){say(e&&e.message||'Police introuvable');return false}finally{setFontBusy(false)}};
 const removeCustom=()=>{try{localStorage.removeItem('pwa-custom');localStorage.setItem('pwa-pal','violet')}catch(e){}setCustom(null);setPalS('violet');window.__applyTheme(theme);say('Thème personnalisé retiré')};
 const wide=view==='pc',framed=view==='mobile'&&vw>=600,toggle=()=>setView(wide?'mobile':'pc');
 const install=async()=>{const e=window.__dp;if(!e)return;e.prompt();try{await e.userChoice}catch(x){}window.__dp=null;setDp(null)};
@@ -689,7 +711,7 @@ suivi:html`<${Suivi} res=${res} setRes=${setRes} wk=${wk} setWk=${setWk} go=${go
 bilan:html`<${Bilan} plan=${plan} done=${done} res=${res} prof=${prof} offer=${offer} go=${go} setWk=${setWk} newC=${()=>setConf('new')}/>`,
 offres:html`<${Offres} offer=${offer} buy=${buy}/>`,
 aide:html`<${Aide} go=${go}/>`,
-reglages:html`<${Reglages} ask=${setConf} theme=${theme} setTheme=${setTheme} go=${go} pal=${pal} setPal=${setPal} custom=${custom} importTheme=${importTheme} removeCustom=${removeCustom} themeBusy=${themeBusy}/>`}[page];
+reglages:html`<${Reglages} ask=${setConf} theme=${theme} setTheme=${setTheme} go=${go} pal=${pal} setPal=${setPal} custom=${custom} importTheme=${importTheme} removeCustom=${removeCustom} themeBusy=${themeBusy} font=${font} setFont=${setFont} fontBusy=${fontBusy}/>`}[page];
 const bodyB=html`<${Boundary} key=${page}>${body}<//>`;
 const CF={new:{title:'Lancer une nouvelle campagne ?',text:offer==='PREMIUM'?'Ta campagne actuelle est gardée dans « Mes autres plans », avec ses résultats et son bilan. Tu pourras la rouvrir à tout moment. Tu vas saisir les informations de ton nouveau morceau.':'Avec l’offre FREE, le nouveau plan remplace l’actuel : son suivi et son bilan ne seront plus accessibles. PREMIUM permet de garder tes anciennes campagnes. Tu vas saisir les informations de ton nouveau morceau.',okLabel:'Lancer la campagne',ok:newCamp},pdf:{title:'Le PDF complet est réservé à PREMIUM',text:'Avec l’offre FREE, tu consultes ton plan de promotion directement dans Synthia. Passe à PREMIUM pour télécharger ton plan complet (morceau, objectifs, actions et calendrier sur 4 semaines) au format PDF.',okLabel:'Voir PREMIUM',no:'Fermer',ok:()=>{setConf(null);go('offres')}},regen:{title:'Régénérer le plan ?',text:'Tu as modifié des textes. En régénérant, ils seront remplacés par de nouveaux textes et tes actions cochées seront réinitialisées.',okLabel:'Régénérer',ok:()=>{setConf(null);gen()}},reset:{title:'Repartir de zéro ?',text:'Ton profil, ton audience, ton plan, les actions cochées, tes résultats et tes campagnes gardées seront effacés'+(user?', sur cet appareil et dans ton compte (ton compte et ton offre restent)':' de ce navigateur')+'. Cette action est définitive.',okLabel:'Oui, tout effacer',ok:resetAll}};
 const overlays=html`<${React.Fragment}>${!online&&html`<div class="fixed top-0 inset-x-0 z-40 text-center text-xs py-1.5 px-3 text-white" style=${{background:'#9A3412'}} role="status">Hors ligne : tes saisies sont gardées sur cet appareil et seront envoyées au retour de la connexion.</div>`}${imp&&html`<${Confirm} title="Importer tes données ?" text="Ce navigateur contient déjà un profil ou un plan. Veux-tu les enregistrer dans ton compte pour les retrouver partout ?" okLabel="Importer" noLabel="Plus tard" ok=${doImport} close=${()=>setImp(false)}/>`}${conf&&html`<${Confirm} title=${CF[conf].title} text=${CF[conf].text} okLabel=${CF[conf].okLabel} ok=${CF[conf].ok} noLabel=${CF[conf].no} close=${()=>setConf(null)}/>`}${wkEnd&&!conf&&html`<${Confirm} title=${'Semaine '+wkEnd+' terminée 🎉'} text=${'Tu as terminé toutes les actions de la semaine '+wkEnd+'. Renseigne maintenant les résultats obtenus (vues, écoutes, abonnés, interactions) pour que Synthia les compare à tes objectifs.'} okLabel="Saisir mes résultats" noLabel="Plus tard" ok=${()=>{const w=wkEnd;setWkEnd(null);setWk(w);go('suivi')}} close=${()=>setWkEnd(null)}/>`}${toast&&html`<div class="fixed left-1/2 -translate-x-1/2 z-40 px-4 py-2 rounded-full text-sm text-white max-w-[90%] text-center" style=${{bottom:'calc('+(wide?'2rem':'5rem')+' + env(safe-area-inset-bottom,0px))',background:'var(--toast)'}} role="status">${toast}</div>`}<//>`;
