@@ -44,6 +44,8 @@ docker compose up --build    # http://localhost:3000, base SQLite dans le volume
 | `APP_URL` | Adresse publique (https en production). Sert aux redirections de paiement et OAuth |
 | `TOKEN_KEY` | Clé AES-256 (32 octets base64) qui chiffre les jetons des réseaux. Obligatoire en production |
 | `DB_PATH` | Fichier SQLite (sur un volume persistant) |
+| `MAIL_MODE`, `RESEND_API_KEY`, `MAIL_FROM` | E-mails de vérification et de mot de passe oublié. `console` écrit le lien dans les logs (dev) ; obligatoire en `resend` en production. Format de l'API Resend à vérifier avec ta clé |
+| `LOG_REQUESTS` | `1` : une ligne JSON par requête, sans IP ni données |
 | `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` | IA Claude (modèle par défaut `claude-sonnet-5-5`) |
 | `GEMINI_API_KEY` / `GEMINI_MODEL` | IA Gemini (`generateContent`) |
 | `XAI_API_KEY` / `XAI_MODEL` | IA Grok (API compatible OpenAI, `https://api.x.ai`) |
@@ -58,7 +60,7 @@ Les adresses des API externes se changent aussi par variable (`*_BASE`, `*_AUTH_
 ## Tests
 
 ```bash
-npm test      # 36 tests serveur (node:test), aucun accès réseau
+npm test      # 43 tests serveur (node:test), aucun accès réseau
 npm run e2e   # parcours complet dans Chromium (Playwright requis), fournisseurs externes simulés
 ```
 
@@ -73,6 +75,14 @@ Tout ce qui touche un service externe a été testé **contre des faux serveurs 
    - Instagram : connexion Instagram Business, compte professionnel (créateur ou entreprise) obligatoire. Vues et likes ne sont pas relevés (saisie manuelle dans l'app).
    - YouTube : API Data v3, portée `youtube.readonly`. Écran de consentement Google à configurer.
    - Les plateformes exigent en général une **revue d'application** avant d'ouvrir l'accès à d'autres comptes que ceux de l'équipe : prévoir du temps après le hackathon.
+
+## Exploitation (bêta)
+
+- **Sauvegarde** : `npm run backup` copie la base à chaud dans `backups/` (14 copies gardées). Exemple de cron : `0 3 * * * cd /app && npm run backup`. Copie ce dossier hors de la machine.
+- **Santé** : `GET /healthz` répond 200 si la base est lisible, 503 sinon.
+- **Pages légales** : `public/legal/` contient des **brouillons** (conditions, confidentialité) avec des champs `[À COMPLÉTER]`. À faire relire avant de lancer.
+- **CI** : `.github/workflows/ci.yml` lance les tests et le parcours e2e à chaque push.
+- Feuille de route : [`ROADMAP-BETA.md`](ROADMAP-BETA.md).
 
 ## Déploiement
 
