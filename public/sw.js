@@ -1,6 +1,6 @@
 /* Service worker de Manager.
    Pour publier une nouvelle version : changer le numéro ci-dessous. */
-const VERSION = 'manager-v2-2';
+const VERSION = 'manager-mvp-1';
 
 const ASSETS = [
   './',
@@ -37,6 +37,8 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;
+  // Serveur (API, retours OAuth et paiement) : jamais de cache, jamais d'interception.
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/oauth/')) return;
 
   // Page : le réseau d'abord (nouvelle version), mais jamais plus de 2,5 s d'attente, sinon le cache.
   if (req.mode === 'navigate') {
