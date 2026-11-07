@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Synthia – Ta musique mérite d’être entendue</title>
-<meta name="theme-color" content="#0F766E" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#041A19" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#2E1065" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B0816" media="(prefers-color-scheme: dark)">
 <meta name="description" content="Un plan de promotion sur 4 semaines pour les artistes indépendants.">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,11 +15,6 @@
 <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <script>
-/* Thème : lu avant le premier affichage (pas de flash). pwa-theme = light | dark ; absent = automatique (système). */
-window.__applyTheme=function(t){var r=document.documentElement;if(t==='light'||t==='dark')r.setAttribute('data-theme',t);else r.removeAttribute('data-theme');var d=t==='dark'||(t!=='light'&&window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches);document.querySelectorAll('meta[name=theme-color]').forEach(function(m){m.setAttribute('content',d?'#041A19':'#0F766E');m.removeAttribute('media')})};
-window.__theme=function(){try{var v=localStorage.getItem('pwa-theme');return v==='light'||v==='dark'?v:'auto'}catch(e){return 'auto'}};
-window.__applyTheme(window.__theme());
-if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener('change',function(){window.__applyTheme(window.__theme())});
 /* PWA : garde l'invitation d'installation du navigateur et enregistre le service worker (https ou localhost). */
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__dp=e;window.dispatchEvent(new Event('dp-ready'))});
 window.addEventListener('appinstalled',function(){window.__dp=null;window.dispatchEvent(new Event('dp-ready'))});
@@ -30,9 +25,13 @@ if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostnam
 <script src="vendor/htm.umd.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <style>
-:root{--bg:#F3FAF9;--card:#FFFFFF;--tx:#0B2220;--mut:#4B6B68;--bd:#D3E8E5;--stg:#E4F1EF;--pri:#0F766E;--pri2:#0D8077;--pt:#0F766E;--ac:#C2410C;--lime:#D8FF3E;--ok:#15803D;--err:#B91C1C;--phone:#0B2220;--glow:rgba(20,184,166,.12);--glow2:rgba(20,184,166,.18);--hero-a:rgba(234,88,12,.55);--hero-b:#0F3F3B;--hero-c:#041A19;--hs1:#CCFBF1;--hs2:#99F6E4;--art1:#14B8A6;--art2:#FFD9B8;--art3:#EA580C;--art4:#FFB067;--eq1:#5EEAD4;--eq2:#FFA45C;--ring:#FFB067;--toast:#0B2220;--bar1:#14B8A6;--bar2:#0F766E;--meta:#0F766E;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--stg:#021110;--bg:#041A19;--card:#0A2B29;--tx:#EAFBF8;--mut:#93B8B3;--bd:#17413E;--pt:#5EEAD4;--ac:#FFA45C;--ok:#4ADE80;--err:#F87171;--phone:#1D4A46;--meta:#041A19}}
-:root[data-theme="dark"]{--stg:#021110;--bg:#041A19;--card:#0A2B29;--tx:#EAFBF8;--mut:#93B8B3;--bd:#17413E;--pt:#5EEAD4;--ac:#FFA45C;--ok:#4ADE80;--err:#F87171;--phone:#1D4A46;--meta:#041A19}
+:root{--bg:#FAF8FF;--card:#FFFFFF;--tx:#17112B;--mut:#6B6588;--bd:#E6E0F5;--stg:#E9E5F5;--pri:#7C3AED;--pri2:#C026D3;--pt:#7C3AED;--ac:#A21CAF;--ok:#15803D;--err:#B91C1C;--phone:#17112B;--glow:rgba(124,58,237,.10);--glow2:rgba(124,58,237,.16);--meta:#2E1065;--hero-a:#C026D3;--hero-b:#2E1065;--hero-c:#0B0816;--hs1:#EDE9FE;--hs2:#DDD6FE;--art1:#7C3AED;--art2:#F5D0FE;--art3:#C026D3;--art4:#F0ABFC;--eq1:#C084FC;--eq2:#E879F9;--ring:#E879F9;--toast:#17112B;--bar1:#A855F7;--bar2:#6D28D9;--lime:#D8FF3E;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0B0816;--card:#16102A;--tx:#F4F1FF;--mut:#A79FC4;--bd:#2A2147;--stg:#05030C;--pri:#7C3AED;--pri2:#C026D3;--pt:#B98CFF;--ac:#F0ABFC;--ok:#4ADE80;--err:#F87171;--phone:#2A2147;--glow:rgba(168,85,247,.12);--glow2:rgba(168,85,247,.20);--meta:#0B0816;--hero-a:#C026D3;--hero-b:#2E1065;--hero-c:#0B0816;--hs1:#EDE9FE;--hs2:#DDD6FE;--art1:#7C3AED;--art2:#F5D0FE;--art3:#C026D3;--art4:#F0ABFC;--eq1:#C084FC;--eq2:#E879F9;--ring:#E879F9;--toast:#17112B;--bar1:#A855F7;--bar2:#6D28D9}}
+:root[data-theme="dark"]{--bg:#0B0816;--card:#16102A;--tx:#F4F1FF;--mut:#A79FC4;--bd:#2A2147;--stg:#05030C;--pri:#7C3AED;--pri2:#C026D3;--pt:#B98CFF;--ac:#F0ABFC;--ok:#4ADE80;--err:#F87171;--phone:#2A2147;--glow:rgba(168,85,247,.12);--glow2:rgba(168,85,247,.20);--meta:#0B0816;--hero-a:#C026D3;--hero-b:#2E1065;--hero-c:#0B0816;--hs1:#EDE9FE;--hs2:#DDD6FE;--art1:#7C3AED;--art2:#F5D0FE;--art3:#C026D3;--art4:#F0ABFC;--eq1:#C084FC;--eq2:#E879F9;--ring:#E879F9;--toast:#17112B;--bar1:#A855F7;--bar2:#6D28D9}
+/* Palette teal (au choix dans Paramètres). La palette « personnalisée » pose ses variables en ligne sur <html>. */
+:root[data-pal="teal"]{--bg:#F3FAF9;--card:#FFFFFF;--tx:#0B2220;--mut:#4B6B68;--bd:#D3E8E5;--stg:#E4F1EF;--pri:#0F766E;--pri2:#0D8077;--pt:#0F766E;--ac:#C2410C;--ok:#15803D;--err:#B91C1C;--phone:#0B2220;--glow:rgba(20,184,166,.12);--glow2:rgba(20,184,166,.18);--meta:#0F766E;--hero-a:rgba(234,88,12,.55);--hero-b:#0F3F3B;--hero-c:#041A19;--hs1:#CCFBF1;--hs2:#99F6E4;--art1:#14B8A6;--art2:#FFD9B8;--art3:#EA580C;--art4:#FFB067;--eq1:#5EEAD4;--eq2:#FFA45C;--ring:#FFB067;--toast:#0B2220;--bar1:#14B8A6;--bar2:#0F766E}
+@media(prefers-color-scheme:dark){:root[data-pal="teal"]:not([data-theme="light"]){--bg:#041A19;--card:#0A2B29;--tx:#EAFBF8;--mut:#93B8B3;--bd:#17413E;--stg:#021110;--pri:#0F766E;--pri2:#0D8077;--pt:#5EEAD4;--ac:#FFA45C;--ok:#4ADE80;--err:#F87171;--phone:#1D4A46;--glow:rgba(20,184,166,.12);--glow2:rgba(20,184,166,.18);--meta:#041A19;--hero-a:rgba(234,88,12,.55);--hero-b:#0F3F3B;--hero-c:#041A19;--hs1:#CCFBF1;--hs2:#99F6E4;--art1:#14B8A6;--art2:#FFD9B8;--art3:#EA580C;--art4:#FFB067;--eq1:#5EEAD4;--eq2:#FFA45C;--ring:#FFB067;--toast:#0B2220;--bar1:#14B8A6;--bar2:#0F766E}}
+:root[data-pal="teal"][data-theme="dark"]{--bg:#041A19;--card:#0A2B29;--tx:#EAFBF8;--mut:#93B8B3;--bd:#17413E;--stg:#021110;--pri:#0F766E;--pri2:#0D8077;--pt:#5EEAD4;--ac:#FFA45C;--ok:#4ADE80;--err:#F87171;--phone:#1D4A46;--glow:rgba(20,184,166,.12);--glow2:rgba(20,184,166,.18);--meta:#041A19;--hero-a:rgba(234,88,12,.55);--hero-b:#0F3F3B;--hero-c:#041A19;--hs1:#CCFBF1;--hs2:#99F6E4;--art1:#14B8A6;--art2:#FFD9B8;--art3:#EA580C;--art4:#FFB067;--eq1:#5EEAD4;--eq2:#FFA45C;--ring:#FFB067;--toast:#0B2220;--bar1:#14B8A6;--bar2:#0F766E}
 html{scroll-padding-top:env(safe-area-inset-top,0px);color-scheme:light dark}
 :root[data-theme="light"]{color-scheme:light}
 :root[data-theme="dark"]{color-scheme:dark}
@@ -79,6 +78,16 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .track{font-weight:800;font-size:1.6rem;line-height:1;color:var(--ac);min-width:2.2rem}
 </style>
 <link rel="stylesheet" href="vendor/tailwind.css">
+<script>
+/* Thème : lu avant le premier affichage (pas de flash). pwa-theme = light | dark ; absent = automatique (système). */
+window.__applyPal=function(){var r=document.documentElement,p='violet',c=null;try{p=localStorage.getItem('pwa-pal')||'violet';c=JSON.parse(localStorage.getItem('pwa-custom')||'null')}catch(e){}
+if(window.__cv){window.__cv.forEach(function(k){r.style.removeProperty(k)});window.__cv=null}
+if(p==='custom'&&c&&c.light&&c.dark){var t=r.getAttribute('data-theme'),d=t==='dark'||(t!=='light'&&window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches),m=d?c.dark:c.light;window.__cv=Object.keys(m);window.__cv.forEach(function(k){r.style.setProperty(k,m[k])});r.setAttribute('data-pal','custom')}else r.setAttribute('data-pal',p==='teal'?'teal':'violet')};
+window.__applyTheme=function(t){var r=document.documentElement;if(t==='light'||t==='dark')r.setAttribute('data-theme',t);else r.removeAttribute('data-theme');window.__applyPal();var c=(getComputedStyle(r).getPropertyValue('--meta')||'').trim()||'#0B0816';document.querySelectorAll('meta[name=theme-color]').forEach(function(m){m.setAttribute('content',c);m.removeAttribute('media')})};
+window.__theme=function(){try{var v=localStorage.getItem('pwa-theme');return v==='light'||v==='dark'?v:'auto'}catch(e){return 'auto'}};
+window.__applyTheme(window.__theme());
+if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener('change',function(){window.__applyTheme(window.__theme())});
+</script>
 </head>
 <body>
 <div id="root"></div>
