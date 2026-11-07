@@ -1,6 +1,6 @@
 /* Service worker de Synthia.
    Pour publier une nouvelle version : changer le numéro ci-dessous. */
-const VERSION = 'synthia-2';
+const VERSION = 'synthia-3';
 
 const ASSETS = [
   './',
@@ -11,6 +11,9 @@ const ASSETS = [
   'vendor/react-dom.production.min.js',
   'vendor/htm.umd.js',
   'vendor/jspdf.umd.min.js',
+  'i18n/en.js',
+  'i18n/es.js',
+  'i18n/pt.js',
   'icons/icon.svg',
   'icons/icon-192.png',
   'icons/icon-512.png',
