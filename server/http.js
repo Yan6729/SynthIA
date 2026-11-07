@@ -65,14 +65,14 @@ function rateLimit({ max, windowMs, key = (req) => req.ip, now = Date.now }) {
 }
 
 /* Requêtes qui modifient l'état : JSON obligatoire (un <form> ne peut pas en envoyer) et Origin identique s'il est présent. */
-function csrfGuard(cfg, { skip = [] } = {}) {
+function csrfGuard(cfg, { formPaths = [/^\/pay\/simulate\//] } = {}) {
   const origin = new URL(cfg.appUrl).origin;
   return (req, res, next) => {
     if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return next();
-    if (skip.includes(req.path)) return next();
     const o = req.headers.origin;
     if (o && o !== origin) return res.status(403).json({ error: 'origine_refusee' });
     if (req.headers['sec-fetch-site'] === 'cross-site') return res.status(403).json({ error: 'origine_refusee' });
+    if (formPaths.some((re) => re.test(req.path))) return next(); // formulaire HTML de la page de paiement simulé (Origin déjà vérifié)
     if (['POST', 'PUT', 'PATCH'].includes(req.method) && !String(req.headers['content-type'] || '').startsWith('application/json')) {
       return res.status(415).json({ error: 'json_requis' });
     }

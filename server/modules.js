@@ -5,4 +5,5 @@ module.exports = [
   require('./me').mount,
   require('./state').mount,
   require('./ai').mount,
+  require('./pay').mount,
 ];
