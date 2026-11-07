@@ -288,6 +288,23 @@ function fakeWorld() {
   await page.unroute('https://fonts.googleapis.com/**');
   step('police : système par défaut, Google Fonts au choix, entrées piégées refusées, retour au système');
 
+  // 6c4. langue : Fon « bientôt » non sélectionnable ; anglais (menu, réglages, dictionnaire servi), espagnol, retour au français
+  assert.equal(await page.getByRole('radio', { name: /Fon/ }).isDisabled(), true);
+  for (const [name, lang, settings, home] of [['English', 'en', 'Settings', 'Home'], ['Español', 'es', 'Ajustes', 'Inicio'], ['Português', 'pt', 'Definições', 'Início']]) {
+    await page.getByRole('radio', { name }).click();
+    await page.waitForFunction((l) => document.documentElement.lang === l && !!window.__L, lang);
+    assert.equal(await page.evaluate(() => localStorage.getItem('pwa-lang')), lang);
+    await page.getByRole('button', { name: settings }).first().waitFor();
+    await page.getByRole('button', { name: home }).first().waitFor();
+    await page.getByRole('button', { name: settings }).first().click();
+    assert.equal(await page.evaluate(() => Object.keys(window.__L).length > 700), true);
+  }
+  await page.getByRole('radio', { name: 'Français' }).click();
+  await page.waitForFunction(() => document.documentElement.lang === 'fr');
+  await page.getByRole('button', { name: 'Paramètres' }).first().waitFor();
+  assert.equal(await page.evaluate(() => window.__L), null);
+  step('langue : EN, ES, PT affichées et mémorisées, Fon désactivé, retour au français');
+
   // 6d. hors ligne : bandeau, puis retour
   await ctx.setOffline(true);
   await text('Hors ligne').waitFor();
