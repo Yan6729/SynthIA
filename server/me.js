@@ -8,7 +8,7 @@ function mount(deps) {
         ai: Object.entries(cfg.ai.providers).filter(([, p]) => p.key).map(([k]) => k),
         payMode: cfg.pay.mode,
         price: cfg.pay.price,
-        social: Object.entries(cfg.social).filter(([, p]) => p.id && p.secret).map(([k]) => k),
+        social: cfg.tokenKey ? Object.entries(cfg.social).filter(([, p]) => p.id && p.secret).map(([k]) => k) : [],
       };
       res.json({ user: req.user ? deps.userView(req.user) : null, features });
     });
