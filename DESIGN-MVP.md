@@ -115,7 +115,7 @@ Pas de clé réelle dans cet environnement : IA, FedaPay et OAuth sont testés c
 **Paramètres → carte « Mon compte »** (première carte)
 - Invité : deux onglets « Créer un compte » / « Me connecter », champs e-mail + mot de passe (8 caractères min.), un bouton, erreur sous les champs. Phrase : « Sans compte, tes données restent dans ce navigateur. »
 - Connecté : e-mail, offre (et date de fin si PREMIUM), bouton « Me déconnecter » (efface les données locales de l'appareil puis recharge). Si PREMIUM et plusieurs fournisseurs IA : puces « Claude / Gemini / Grok » pour choisir.
-- Après une connexion : si le compte est vide et que le navigateur contient déjà un profil ou un plan → fenêtre « Importer les données de ce navigateur dans ton compte ? » (Oui = import, Non = on repart d'un compte vide). Si le compte contient déjà des données, elles remplacent celles du navigateur.
+- Après une connexion : si le compte est vide et que le navigateur contient déjà un profil ou un plan → fenêtre « Importer les données de ce navigateur dans ton compte ? » (Importer, ou Plus tard). Si le compte contient déjà des données, elles remplacent celles du navigateur. « Plus tard » laisse les données du navigateur telles quelles (elles se synchronisent au fil des modifications).
 
 **Offres** : le bouton PREMIUM lance le paiement (invité → message « Crée un compte » + ouverture de Paramètres). Texte sous le titre : « mode test, aucun argent réel » en simulation, « paiement sécurisé FedaPay » sinon. Si PREMIUM : « Actif jusqu'au … ». La fenêtre de paiement simulé de la maquette est supprimée.
 
