@@ -315,8 +315,19 @@ ${!on.length&&!avail.length&&html`<p class="text-xs mut mt-3">Les connexions arr
 ${on.length>0&&html`<p class="text-xs rounded-lg p-2 mt-3" style=${{background:'var(--bg)'}}>Total des abonnés connectés : ${N(tot)}</p>`}
 <div class=${pc?'grid grid-cols-3 gap-6 items-start':''}>${on.map(k=>html`<${Net} key=${k} p=${k} s=${all[k]} set=${s=>set(k,s)} refresh=${()=>refresh(k)} off=${()=>off(k)}/>`)}</div></section>`}
 
+/* ---------- Démarrage guidé (tableau de bord) : 4 étapes, masquable ---------- */
+function Start({prof,st,plan,res,go}){
+const [hid,setHid]=useState(()=>{try{return localStorage.getItem('mgr:startHidden')==='1'}catch(e){return false}});
+const steps=[['Créer ton profil d’artiste',!!(prof.artist&&prof.artist.trim())&&!prof.draft,'profil'],['Renseigner ton audience (facultatif mais utile)',['tt','ig','fb','views'].some(k=>st[k]!==''&&st[k]!=null),'profil'],['Générer ton plan sur 4 semaines',!!plan,'plan'],['Saisir tes premiers résultats',res.some(r=>r.views!==''),'suivi']];
+const n=steps.filter(x=>x[1]).length;
+if(hid||n===steps.length)return null;
+const hide=()=>{setHid(true);try{localStorage.setItem('mgr:startHidden','1')}catch(e){}};
+return html`<section class="card" aria-label="Démarrage"><div class="flex items-start justify-between gap-3"><div><h2 class="font-bold">Pour bien démarrer</h2><p class="text-xs mut">${n} étape${n>1?'s':''} sur ${steps.length}</p></div><button class="chip text-xs shrink-0" onClick=${hide}>Masquer</button></div>
+<div class="h-2 rounded-full overflow-hidden mt-3" style=${{background:'var(--bd)'}} role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow=${n*25}><div class="h-full rounded-full" style=${{width:n*25+'%',background:'var(--pt)'}}></div></div>
+<ul class="mt-3 space-y-1">${steps.map(([t,ok,to])=>html`<li key=${t}><button class="w-full flex items-center gap-3 text-left py-2 text-sm" onClick=${()=>go(to)}><span class=${'w-6 h-6 rounded-full grid place-items-center shrink-0 '+(ok?'text-white':'')} style=${ok?{background:'var(--pri)'}:{border:'2px solid var(--bd)'}} aria-hidden="true">${ok&&html`<${I} n="check" s=${14}/>`}</span><span class=${ok?'mut':'font-medium'} style=${ok?{textDecoration:'line-through'}:null}>${t}</span><span class="sr-only">${ok?'(fait)':'(à faire)'}</span></button></li>`)}</ul></section>`}
+
 /* ---------- Écran 5 : Tableau de bord ---------- */
-function Dash({prof,plan,done,res,go,soc,setSoc,reco}){
+function Dash({prof,st,plan,done,res,go,soc,setSoc,reco}){
 const pc=useWide();
 const f=res.filter(r=>r.views!==''),S=k=>res.reduce((a,r)=>a+(+r[k]||0),0);
 const ok=res.map((r,i)=>r.views!==''&&+r.views>=OBJ[i].views).filter(Boolean).length;
@@ -327,12 +338,12 @@ const nextC=nx[0]?html`<div class="card" style=${{borderColor:'var(--pt)',border
 const bestC=html`<div class="card"><p class="text-xs mut">Meilleur réseau</p><p class="font-bold mt-1">${bv?bv+' (vues)':'Pas encore de données'}</p>${bi&&bi!==bv&&html`<p class="text-sm">${bi} (interactions)</p>`}</div>`;
 const tipC=html`<div class="card"><p class="text-xs mut">Conseil</p><p class="text-sm mt-1">${tip}</p></div>`;
 const kpiC=html`<div class=${'grid gap-3 '+(pc?'grid-cols-6':'grid-cols-2')}>${[['Actions réalisées',dn+' sur '+tl,'check'],['Actions restantes',tl-dn,'music'],['Vues obtenues',N(S('views')),'trend'],['Interactions',N(S('inter')),'spark'],['Nouveaux abonnés',S('subs')?N(S('subs')):'—','user'],['Objectifs atteints',ok+' sur '+f.length,'crown']].map(([l,v,ic])=>html`<div key=${l} class="card"><span style=${{color:'var(--pt)'}}><${I} n=${ic}/></span><p class="text-2xl font-extrabold mt-1">${v}</p><p class="text-sm mut">${l}</p></div>`)}</div>`;
-const resC=html`<${Reseaux} soc=${soc} setSoc=${setSoc}/>`;
+const resC=html`<${Reseaux} soc=${soc} setSoc=${setSoc}/>`,startC=html`<${Start} prof=${prof} st=${st} plan=${plan} res=${res} go=${go}/>`;
 const vuesC=html`<div class="card"><h2 class="font-bold mb-1">Vues par semaine</h2><p class="text-xs mut mb-2">Violet : résultats saisis. Pointillés : objectif prévisionnel.</p><${Line} a=${f.map(r=>+r.views)} b=${OBJ.map(o=>o.views)}/></div>`;
 const listC=html`<div class="card"><h2 class="font-bold mb-2">Prochaines actions</h2>${plan?nx.map(a=>html`<div key=${a.id} class="py-2 border-t first:border-0" style=${{borderColor:'var(--bd)'}}><p class="text-sm font-bold" style=${{color:'var(--pt)'}}>Semaine ${a.w}, ${a.day} à ${a.when}</p><p class="text-sm">${a.ch} : ${a.what}</p></div>`):html`<p class="text-sm mut mb-3">Pas encore de plan.</p><button class="btn" onClick=${()=>go('plan')}>Générer mon plan</button>`}</div>`;
 return pc
-?html`<div class="space-y-4">${heroC}<div class="grid grid-cols-3 gap-4 items-stretch">${nextC}${bestC}${tipC}</div>${kpiC}<div class="grid grid-cols-2 gap-4 items-start">${vuesC}${listC}</div>${resC}</div>`
-:html`<div class="space-y-4">${heroC}${nextC}<div class="grid grid-cols-2 gap-3">${bestC}${tipC}</div>${kpiC}${resC}${vuesC}${listC}</div>`}
+?html`<div class="space-y-4">${heroC}${startC}<div class="grid grid-cols-3 gap-4 items-stretch">${nextC}${bestC}${tipC}</div>${kpiC}<div class="grid grid-cols-2 gap-4 items-start">${vuesC}${listC}</div>${resC}</div>`
+:html`<div class="space-y-4">${heroC}${startC}${nextC}<div class="grid grid-cols-2 gap-3">${bestC}${tipC}</div>${kpiC}${resC}${vuesC}${listC}</div>`}
 
 /* ---------- Écran 6 : Suivi hebdomadaire ---------- */
 function Suivi({res,setRes,wk,setWk,go,plan,setPlan,done,prof,reco,setReco}){
@@ -562,7 +573,7 @@ const body={home:html`<${Home} go=${go}/>`,
 profil:html`<div class=${wide?'grid grid-cols-5 gap-6 items-start':'space-y-6'}><div class=${wide?'col-span-3':''}><${Profil} prof=${prof} save=${saveProf} go=${go}/></div><div class=${'space-y-6 '+(wide?'col-span-2':'')}><${Audience} st=${st} save=${setSt} go=${go}/><button class="btn btn2 w-full" onClick=${()=>go('offres')}>Voir les abonnements</button></div></div>`,
 audience:html`<${Audience} st=${st} save=${setSt} go=${go}/>`,
 plan:html`<${Plan} plan=${plan} gen=${()=>plan&&plan.some(a=>a.edited)?setConf('regen'):gen()} busy=${busy} done=${done} tog=${tog} wk=${wk} setWk=${setWk} copy=${copy} share=${share} go=${go} pdf=${pdf} ics=${()=>exportICS(prof,plan,say)} saveText=${saveText} resetText=${resetText} arch=${arch} open=${open} offer=${offer} created=${created}/>`,
-dash:html`<${Dash} prof=${prof} plan=${plan} done=${done} res=${res} go=${go} soc=${soc} setSoc=${setSoc} reco=${reco}/>`,
+dash:html`<${Dash} prof=${prof} st=${st} plan=${plan} done=${done} res=${res} go=${go} soc=${soc} setSoc=${setSoc} reco=${reco}/>`,
 suivi:html`<${Suivi} res=${res} setRes=${setRes} wk=${wk} setWk=${setWk} go=${go} plan=${plan} setPlan=${setPlan} done=${done} prof=${prof} reco=${reco} setReco=${setReco}/>`,
 bilan:html`<${Bilan} plan=${plan} done=${done} res=${res} prof=${prof} offer=${offer} go=${go} setWk=${setWk} newC=${()=>setConf('new')}/>`,
 offres:html`<${Offres} offer=${offer} buy=${buy}/>`,
