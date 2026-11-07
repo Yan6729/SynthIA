@@ -105,7 +105,6 @@ const I=({n,s=20})=>html`<svg width=${s} height=${s} viewBox="0 0 24 24" fill="n
 /* ---------- Données de démonstration ---------- */
 const TT=['Teasing','Lancement','Amplification','Fidélisation'];
 const OBJ=[{pubs:3,views:1500,inter:150},{pubs:3,views:2500,inter:300},{pubs:3,views:4000,inter:500},{pubs:3,views:6000,inter:800}];
-const RES0=[{pubs:3,views:1320,inter:164,subs:48,net:{TikTok:{v:760,i:70},Instagram:{v:380,i:80},Facebook:{v:180,i:14}}},{pubs:3,views:2780,inter:341,subs:112,net:{TikTok:{v:1700,i:140},Instagram:{v:700,i:160},Facebook:{v:380,i:41}}},{pubs:'',views:'',inter:''},{pubs:'',views:'',inter:''}];
 const ROWS=[
 [1,'Lundi','TikTok','Publier un extrait de 15 secondes du refrain','18 h','30 min',0,'Vues et partages',s=>`🔥 Le refrain de « ${s.song} » arrive bientôt ! Tu le chantes déjà ? #${s.tag}`],
 [1,'Mercredi','Instagram','Poster un Reel des coulisses du studio','19 h','45 min',0,'Vues et enregistrements',s=>`Dans les coulisses de « ${s.song} » 🎙️ Le vrai travail commence ici. Sortie très bientôt ! #${s.tag}`],
@@ -140,7 +139,7 @@ c.forEach((x,i)=>{if(tot+x>cap)return;tot+=x;const q=PAID[i],a={id:q[8],w:q[0],d
 return rows.sort((a,b)=>a.w-b.w||DAYS.indexOf(a.day)-DAYS.indexOf(b.day))};
 
 /* ---------- Personnalisation du plan (règles locales, sans IA réelle) ---------- */
-const DEF0={artist:'Zeynab Kora',genre:'Afrobeats',lang:'Français',song:'Soleil de Cotonou',date:'2026-12-04',nets:['TikTok','Instagram','Facebook'],bud:'petit',goal:'Me faire connaître',pays:'Bénin',ville:'Cotonou',stade:'Émergent',type:'Single',lien:'',cible:'Jeunes 15–25 ans'};
+const BLANK={artist:'',genre:'Afrobeats',lang:'Français',song:'',date:'',nets:[],bud:null,goal:'Me faire connaître',pays:'Bénin',ville:'',stade:'Émergent',type:'Single',lien:'',cible:'Jeunes 15–25 ans'},DEF0=BLANK;
 const HOOK={'Afrobeats':'un défi danse','Amapiano':'un défi danse','Coupé-décalé':'un défi danse','Zouglou':'un sketch de quartier en vidéo','Gospel':'un message d’encouragement en vidéo','Rap / Hip-hop':'un défi freestyle','Reggae':'une vidéo « message positif »','Variété':'une version acoustique en vidéo'};
 const slug=t=>(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9]/g,'');
 const ctx=(p,st={})=>{const d=new Date((p.date||'')+'T00:00:00'),ok=!isNaN(d),fol=['tt','ig','fb'].reduce((a,k)=>a+(+st[k]||0),0),ville=p.ville||p.pays||'ton pays';
@@ -178,15 +177,12 @@ if(x.goal==='Gagner des abonnés')mk(22,3,'Mercredi',ch,'Inviter clairement ton 
 return o};
 const buildPlan=(p,st)=>{const x=ctx(p,st);return [...buildPlanBase(p).map(a=>enrich(a,x)),...extras(x)].sort((a,b)=>a.w-b.w||DAYS.indexOf(a.day)-DAYS.indexOf(b.day))};
 
-/* ---------- Couche IA : simulée pour l’instant ----------
-   Pour brancher une vraie IA : remplacer le corps par
-   fetch('/api/plan',{method:'POST',body:JSON.stringify({profil,stats})}).then(r=>r.json())
-   qui doit renvoyer le même format de tableau d’actions que buildPlan(). */
-/* AI_CFG.endpoint = URL de TON serveur (ex. '/api/plan'). Le serveur appelle l’IA avec la clé secrète (jamais dans le navigateur)
-   et renvoie [{id,text}] : les textes réécrits par l’IA, fusionnés dans le plan local. Sans endpoint, ou en cas d’échec : textes du moteur local. Voir server.js. */
+/* ---------- Plan : moteur de règles local + textes IA (PREMIUM) ----------
+   Le moteur local construit toujours le plan. Pour un compte PREMIUM, AI_CFG.endpoint pointe vers /api/ai/plan : le serveur appelle l’IA
+   (clé secrète jamais dans le navigateur) et renvoie [{id,text}], fusionnés dans le plan. En cas d’échec : textes du moteur local. */
 const AI_CFG={endpoint:null};
 const AI={async generatePlan(profil,stats){
-await new Promise(r=>setTimeout(r,900));const pl=buildPlan(profil,stats);if(!AI_CFG.endpoint)return pl;
+const pl=buildPlan(profil,stats);if(!AI_CFG.endpoint)return pl;
 try{const r=await fetch(AI_CFG.endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profil,actions:pl.map(a=>({id:a.id,ch:a.ch,what:a.what,text:a.text}))})});if(r.ok){const j=await r.json();if(Array.isArray(j)){const m={};j.forEach(t=>{if(t&&typeof t.text==='string'&&t.text.trim())m[t.id]=t.text});return pl.map(a=>m[a.id]?{...a,text:m[a.id],ai:true}:a)}}}catch(e){}return pl}};
 
 /* ---------- Petits composants ---------- */
@@ -203,7 +199,7 @@ const Ring=({p})=>html`<svg width="92" height="92" viewBox="0 0 36 36" role="img
 const Art=()=>html`<div class="mt-6"><svg viewBox="0 0 220 150" class="w-full max-w-xs mx-auto" aria-hidden="true"><circle cx="110" cy="80" r="68" fill="#14B8A6" opacity=".35"/><circle cx="110" cy="62" r="26" fill="#FFD9B8"/><path d="M58 146c0-30 22-48 52-48s52 18 52 48z" fill="#EA580C"/><path d="M82 58a28 28 0 0 1 56 0" fill="none" stroke="#fff" strokeWidth="5" strokeLinecap="round"/><rect x="76" y="54" width="10" height="20" rx="5" fill="#fff"/><rect x="134" y="54" width="10" height="20" rx="5" fill="#fff"/><path d="M26 44V22l14 3v4l-10-2v17" fill="none" stroke="#fff" strokeWidth="3"/><circle cx="24" cy="46" r="4" fill="#fff"/><circle cx="38" cy="43" r="4" fill="#fff"/><path d="M186 70V50l12 2v3l-8-1v16" fill="none" stroke="#FFB067" strokeWidth="3"/><circle cx="184" cy="72" r="3.5" fill="#FFB067"/><circle cx="196" cy="69" r="3.5" fill="#FFB067"/></svg><div class="flex items-end justify-center gap-1 h-10 mt-1">${Array.from({length:16},(_,i)=>html`<i key=${i} class="b" style=${{width:7,height:14+(i*11)%24,background:i%3?'#5EEAD4':'#FFA45C',animationDelay:i*.07+'s'}}></i>`)}</div></div>`;
 
 /* ---------- Écran 1 : Accueil ---------- */
-const OFFRES=[{k:'FREE',p:'0 FCFA',f:['Création d’un profil artiste','Premier plan de promotion sur quatre semaines','Conseils de base','Textes promotionnels de base','Suivi élémentaire de la campagne','Saisie des résultats et bilan de campagne simple']},{k:'PREMIUM',p:'5 000 FCFA/mois',hot:'var(--pt)',tag:'Pour aller plus loin',f:['Création de plusieurs plans de promotion','Promotion de plusieurs morceaux','Textes personnalisés par IA (IA à connecter)','Rapports détaillés','Suivi avancé des campagnes','Analyse des statistiques des réseaux connectés (quand les intégrations seront disponibles)','Bilan détaillé et conseils pour la prochaine sortie','Anciennes campagnes gardées dans « Mes autres plans »','Téléchargement du plan complet en PDF']}];
+const OFFRES=[{k:'FREE',p:'0 FCFA',f:['Création d’un profil artiste','Premier plan de promotion sur quatre semaines','Conseils de base','Textes promotionnels de base','Suivi élémentaire de la campagne','Saisie des résultats et bilan de campagne simple']},{k:'PREMIUM',p:'5 000 FCFA/mois',hot:'var(--pt)',tag:'Pour aller plus loin',f:['Création de plusieurs plans de promotion','Promotion de plusieurs morceaux','Textes personnalisés rédigés par IA','Rapports détaillés','Suivi avancé des campagnes','Analyse des statistiques de tes réseaux connectés','Bilan détaillé et conseils pour la prochaine sortie','Anciennes campagnes gardées dans « Mes autres plans »','Téléchargement du plan complet en PDF']}];
 const Home=({go})=>{const pc=useWide();
 const hero=html`<section class=${'hero rounded-3xl text-white '+(pc?'p-10 grid grid-cols-2 gap-8 items-center':'p-6')}>
 <div><p class="kicker">Pour les artistes émergents</p><h1 class=${'hero-t font-extrabold '+(pc?'text-5xl':'text-3xl')}>Ta musique mérite d’être <span class="lime">entendue.</span></h1>
@@ -260,7 +256,7 @@ return html`<${ProfilResume} prof=${prof} edit=${()=>{setEd(true);toTop()}} go=$
 /* ---------- Écran 3 : Audience ---------- */
 function Audience({st,save,go}){
 const set=(k,v)=>save({...st,[k]:v===''?'':+v}),fl=[['tt','Abonnés TikTok'],['views','Vues (total)'],['ig','Abonnés Instagram'],['fb','Followers Facebook']];
-return html`<div><h1 class="text-2xl font-extrabold">Ton audience</h1><p class="mut text-sm mb-3">Saisie manuelle de secours. Tous les champs sont facultatifs.</p><div class="card mb-3 flex items-center justify-between gap-3"><p class="text-sm">Plus simple : connecte tes réseaux et Synthia récupère tes chiffres.</p><button class="btn shrink-0" onClick=${()=>go('dash')}>Connecter</button></div>
+return html`<div><h1 class="text-2xl font-extrabold">Ton audience</h1><p class="mut text-sm mb-3">Saisie manuelle. Tous les champs sont facultatifs.</p><div class="card mb-3 flex items-center justify-between gap-3"><p class="text-sm">Plus simple : connecte tes réseaux et Synthia récupère tes chiffres.</p><button class="btn shrink-0" onClick=${()=>go('dash')}>Connecter</button></div>
 <div class="card grid grid-cols-2 gap-3">${fl.map(([k,l])=>html`<${F} key=${k} l=${l}><input type="number" min="0" inputMode="numeric" class="inp" placeholder="Optionnel" value=${st[k]} onInput=${ev=>set(k,ev.target.value)}/><//>`)}</div>
 <div class="card mt-3"><${F} l="Performances précédentes"><textarea class="inp" rows="3" placeholder="Ex. : mon dernier titre a eu 5 000 vues en un mois" value=${st.perf} onInput=${ev=>save({...st,perf:ev.target.value})}></textarea><//></div>
 <div class="grid grid-cols-2 gap-3 mt-3">${fl.map(([k,l])=>html`<div key=${k} class="card"><p class="text-2xl font-extrabold">${N(st[k])}</p><p class="text-sm mut">${l}</p></div>`)}</div>
@@ -280,91 +276,57 @@ if(!plan&&!created)return html`<div><h1 class="text-2xl font-extrabold">Ton plan
 if(!plan)return html`<div><h1 class="text-2xl font-extrabold">Ton plan de promotion</h1><div class="card mt-4 text-center py-8"><span style=${{color:'var(--pt)'}}><${I} n="spark" s=${36}/></span><p class="mt-2 mut text-sm px-4">Synthia va créer ton plan sur 4 semaines à partir de ton profil et de ton audience.</p><button class="btn mt-4" onClick=${gen}><${I} n="spark" s=${18}/> Générer mon plan</button></div></div>`;
 const cost=plan.reduce((a,x)=>a+x.cost,0),list=plan.filter(a=>a.w===wk),lv=LV[plan[0].lv]?plan[0].lv:'nr';
 return html`<div><div class="flex items-center justify-between gap-2"><h1 class="text-2xl font-extrabold">Ton plan</h1><div class="flex gap-2"><button class="chip" onClick=${pdf}><${I} n="share" s=${14}/> PDF${offer==='PREMIUM'?'':' 🔒'}</button><button class="chip" onClick=${share}>Partager</button><button class="chip" onClick=${gen}>Régénérer</button></div></div>
-<p class="text-sm mut mt-1">${plan.length} actions · dépenses payantes : ${N(cost)} FCFA${LV[lv].cap?` sur ${N(LV[lv].cap)} FCFA maximum`:''}</p><div class="card mt-2 text-sm"><p><b>${LV[lv].l}.</b> ${NOTE[lv]}</p><p class="mut mt-1">Un budget plus élevé ne garantit pas de meilleurs résultats : la régularité et la qualité de tes contenus comptent d’abord. Les actions payantes sont toujours facultatives.</p><p class="text-xs mut mt-1">Plan produit par le moteur de recommandation intégré de Synthia (règles adaptées à ton profil). L’IA générative sera branchée via un serveur.</p><button class="chip mt-2" onClick=${()=>go('profil')}>Modifier mon budget</button></div>
+<p class="text-sm mut mt-1">${plan.length} actions · dépenses payantes : ${N(cost)} FCFA${LV[lv].cap?` sur ${N(LV[lv].cap)} FCFA maximum`:''}</p><div class="card mt-2 text-sm"><p><b>${LV[lv].l}.</b> ${NOTE[lv]}</p><p class="mut mt-1">Un budget plus élevé ne garantit pas de meilleurs résultats : la régularité et la qualité de tes contenus comptent d’abord. Les actions payantes sont toujours facultatives.</p><p class="text-xs mut mt-1">Plan construit par le moteur de recommandation de Synthia à partir de ton profil. Les textes rédigés par IA sont inclus dans PREMIUM.</p><button class="chip mt-2" onClick=${()=>go('profil')}>Modifier mon budget</button></div>
 <div class=${'grid grid-cols-4 gap-2 my-3 '+(pc?'max-w-sm':'')}>${[1,2,3,4].map(w=>html`<button key=${w} class=${'chip text-center '+(w===wk?'on':'')} onClick=${()=>setWk(w)}>S${w}</button>`)}</div>
 <h2 class="font-bold mb-2">Semaine ${wk} : ${TT[wk-1]}</h2><div class=${pc?'grid grid-cols-2 gap-x-4 items-start':''}>${list.map(a=>html`<${Act} key=${a.id} a=${a} on=${done.includes(a.id)} tog=${tog} copy=${copy}/>`)}</div>${plan.every(a=>done.includes(a.id))&&html`<div class="card mt-4" style=${{borderColor:'var(--pt)',borderWidth:2}}><p class="font-bold">Campagne terminée 🎉</p><p class="text-sm mut mt-1">Toutes tes actions sont faites. Découvre le bilan de ta campagne.</p><button class="btn mt-3" onClick=${()=>go('bilan')}>Voir mon bilan</button></div>`}<div class="card mt-4"><h2 class="font-bold">Mes autres plans</h2>${offer==='PREMIUM'?(arch.length?arch.map((a,i)=>html`<div key=${i} class="flex items-center justify-between gap-2 mt-2 text-sm"><span>« ${a.prof.song} » · ${a.plan.filter(x=>(a.done||[]).includes(x.id)).length}/${a.plan.length} actions</span><div class="flex gap-2"><button class="chip" onClick=${()=>open(i,'bilan')}>Bilan</button><button class="chip" onClick=${()=>open(i)}>Ouvrir</button></div></div>`):html`<p class="text-sm mut mt-1">Quand tu lances une nouvelle campagne, l’ancienne est gardée ici avec son suivi et son bilan.</p>`):html`<p class="text-sm mut mt-1">Premium : garde plusieurs plans, un par morceau. Avec FREE, un nouveau plan remplace l’ancien.</p><button class="chip mt-2" onClick=${()=>go('offres')}>Voir Premium</button>`}</div></div>`}
 
-/* ---------- Connexion aux réseaux sociaux (OAuth) ----------
-   Architecture prévue : aucun mot de passe ne passe par Manager.
-   1. startOAuth() redirige vers la page OFFICIELLE de la plateforme (code + PKCE + state).
-   2. La plateforme renvoie un code vers redirectUri. Le SERVEUR de Synthia l’échange contre un jeton
-      (client secret et jetons jamais dans le navigateur) et le stocke chiffré.
-   3. Une tâche planifiée côté serveur appelle l’API officielle en lecture seule et enregistre un relevé par période.
-   4. Le navigateur lit /api/social/:plateforme/stats (même format que les relevés de DEMO ci-dessous).
-   Squelette à valider avec la documentation actuelle de chaque plateforme (portées, revue d’application, comptes éligibles). */
-const OAUTH={
-tiktok:{n:'TikTok',auth:'https://www.tiktok.com/v2/auth/authorize/',scopes:['user.info.basic','user.info.stats','video.list'],why:['Nom et photo de ton profil','Abonnés, likes et nombre de vidéos','Liste de tes vidéos et leurs vues']},
-instagram:{n:'Instagram',auth:'https://www.instagram.com/oauth/authorize',scopes:['instagram_business_basic','instagram_business_manage_insights'],why:['Nom et photo de ton compte','Abonnés et nombre de publications','Statistiques de tes publications'],note:'Un compte professionnel (créateur ou entreprise) est nécessaire.'},
-youtube:{n:'YouTube',auth:'https://accounts.google.com/o/oauth2/v2/auth',scopes:['https://www.googleapis.com/auth/youtube.readonly','https://www.googleapis.com/auth/yt-analytics.readonly'],why:['Nom et photo de ta chaîne','Abonnés, vues et nombre de vidéos','Statistiques de tes vidéos (lecture seule)']}};
-const OA_CFG={clientId:{tiktok:null,instagram:null,youtube:null},redirectUri:'https://manager.example/oauth/callback'};
-const b64u=b=>btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-async function startOAuth(p){const id=OA_CFG.clientId[p];if(!id)return {configured:false};
-const state=b64u(crypto.getRandomValues(new Uint8Array(16))),ver=b64u(crypto.getRandomValues(new Uint8Array(32))),ch=b64u(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(ver)));
-try{sessionStorage.setItem('oa:'+state,JSON.stringify({p,ver}))}catch(e){}
-const q=new URLSearchParams({[p==='tiktok'?'client_key':'client_id']:id,redirect_uri:OA_CFG.redirectUri,response_type:'code',scope:OAUTH[p].scopes.join(p==='tiktok'?',':' '),state,code_challenge:ch,code_challenge_method:'S256'});
-location.href=OAUTH[p].auth+'?'+q;return {configured:true}}
-/* Données FICTIVES, uniquement pour la maquette. null = donnée non fournie par l’API : saisie manuelle de secours. */
-const DEMO={tiktok:{name:'@zeynab.kora.demo',f:3200,v:18500,l:4100,p:24},instagram:{name:'@zeynabkora_demo',f:1450,v:7200,l:null,p:31},youtube:{name:'Zeynab Kora (démo)',f:620,v:9400,l:null,p:9}};
-const mkHist=d=>[.84,.9,.95,1].map((k,i)=>({t:Date.now()-(3-i)*7*864e5,f:Math.round(d.f*k),v:Math.round(d.v*k),l:d.l==null?null:Math.round(d.l*k),p:Math.max(1,d.p-(3-i)*2)}));
+/* ---------- Réseaux sociaux ----------
+   Tout le flux OAuth est côté serveur : /api/social/:plateforme/connect (state + PKCE), jetons chiffrés, relevés lus par le serveur.
+   Le navigateur ne voit que le nom du compte et les chiffres. Une plateforme non configurée affiche « Bientôt disponible ». */
+const OAUTH={tiktok:{n:'TikTok'},instagram:{n:'Instagram'},youtube:{n:'YouTube'}};
 const MET=[['f','Abonnés'],['v','Vues'],['l','Likes'],['p','Publications']];
 const pct=x=>(x>0?'+':'')+String(x).replace('.',',')+' %';
-function Consent({p,ok,close}){const o=OAUTH[p],pc=useWide();return html`<div class=${'fixed inset-0 z-30 flex justify-center '+(pc?'items-center p-4':'items-end')} style=${{background:'rgba(0,0,0,.6)'}}><div class="card w-full max-w-md overflow-y-auto" role="dialog" aria-modal="true" style=${pc?{borderRadius:'1.5rem',padding:'1.5rem',maxHeight:'90%'}:{borderRadius:'1.5rem 1.5rem 0 0',paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom,0px))',maxHeight:'90%'}}>
-<h2 class="font-extrabold text-lg">Connecter ${o.n}</h2>
-<p class="text-xs rounded-lg p-2 my-3" style=${{background:'var(--bg)'}}>Écran de démonstration : ce n’est pas la page officielle de ${o.n} et aucune API n’est configurée. Aucune connexion réelle n’est établie.</p>
-<p class="text-sm">Dans la vraie version, tu seras redirigé vers la page officielle de ${o.n}, tu t’y connecteras toi-même et Synthia ne verra jamais ton mot de passe.</p>
-<p class="text-sm font-semibold mt-3">Synthia demandera uniquement, en lecture seule :</p>
-<ul class="text-sm mt-1 space-y-1">${o.why.map(x=>html`<li key=${x} class="flex gap-2"><span style=${{color:'var(--ok)'}}><${I} n="check" s=${16}/></span>${x}</li>`)}</ul>
-${o.note&&html`<p class="text-xs mut mt-2">${o.note}</p>`}
-<p class="text-xs mut mt-2">Tu pourras retirer l’accès à tout moment depuis les réglages de ${o.n}.</p>
-<div class="flex gap-2 mt-4"><button class="btn btn2 flex-1" onClick=${close}>Annuler</button><button class="btn flex-1" onClick=${ok}>Charger des données fictives</button></div></div></div>`}
 function Net({p,s,set,refresh,off}){
 const H=s.hist,c=H[H.length-1],pv=H[H.length-2],evo=k=>pv&&c[k]!=null&&pv[k]>0?Math.round((c[k]-pv[k])/pv[k]*1000)/10:null;
 return html`<div class="mt-4 pt-4 border-t" style=${{borderColor:'var(--bd)'}}>
-<div class="flex items-center gap-3"><span class="w-11 h-11 rounded-full grid place-items-center text-white font-bold bar" aria-hidden="true">${(s.name||OAUTH[p].n).replace('@','')[0].toUpperCase()}</span><div class="flex-1 min-w-0"><p class="font-semibold truncate">${s.name||OAUTH[p].n}</p><p class="text-xs mut">${OAUTH[p].n}${s.demo?' · données fictives (démo)':s.live?' · connecté':''}</p>${s.status==='expired'&&html`<p class="text-xs" style=${{color:'var(--err)'}}>Connexion expirée : déconnecte puis reconnecte ce réseau.</p>`}</div></div>
-<div class="grid grid-cols-2 gap-2 mt-3">${MET.map(([k,l])=>html`<div key=${k} class="rounded-xl p-3" style=${{background:'var(--bg)'}}>${c[k]==null?html`<input type="number" min="0" inputMode="numeric" class="inp" placeholder="Saisie manuelle" value=${s.man[k]??''} onInput=${e=>set({...s,man:{...s.man,[k]:e.target.value===''?'':+e.target.value}})}/>`:html`<p class="text-xl font-extrabold">${N(c[k])}</p>`}<p class="text-sm mut">${l}</p>${c[k]==null?html`<p class="text-xs mut">Non fournie par l’API</p>`:evo(k)!==null&&html`<p class="text-xs" style=${{color:evo(k)>=0?'var(--ok)':'var(--err)'}}>${pct(evo(k))} depuis la dernière mise à jour</p>`}</div>`)}</div>
-<p class="text-xs mut mt-3 mb-1">Évolution des abonnés (${H.length} relevés${s.demo?', fictifs et simulés':''})</p><${Line} a=${H.map(x=>x.f)} b=${[]} lab=${'Évolution des abonnés '+OAUTH[p].n}/>
-<div class="flex flex-wrap items-center gap-2 mt-2"><button class="chip" onClick=${refresh}>${s.demo?'Simuler une actualisation (démo)':'Actualiser'}</button><button class="chip" onClick=${off}>Déconnecter</button><span class="text-xs mut">Dernier relevé : ${new Date(c.t).toLocaleDateString('fr-FR',{day:'numeric',month:'long'})}</span></div></div>`}
+<div class="flex items-center gap-3"><span class="w-11 h-11 rounded-full grid place-items-center text-white font-bold bar" aria-hidden="true">${(s.name||OAUTH[p].n).replace('@','')[0].toUpperCase()}</span><div class="flex-1 min-w-0"><p class="font-semibold truncate">${s.name||OAUTH[p].n}</p><p class="text-xs mut">${OAUTH[p].n} · connecté</p>${s.status==='expired'&&html`<p class="text-xs err">Connexion expirée : déconnecte puis reconnecte ce réseau.</p>`}</div></div>
+<div class="grid grid-cols-2 gap-2 mt-3">${MET.map(([k,l])=>html`<div key=${k} class="rounded-xl p-3" style=${{background:'var(--bg)'}}>${c[k]==null?html`<input type="number" min="0" inputMode="numeric" class="inp" aria-label=${l} placeholder="Saisie manuelle" value=${s.man[k]??''} onInput=${e=>set({...s,man:{...s.man,[k]:e.target.value===''?'':+e.target.value}})}/>`:html`<p class="text-xl font-extrabold">${N(c[k])}</p>`}<p class="text-sm mut">${l}</p>${c[k]==null?html`<p class="text-xs mut">Non fournie par ${OAUTH[p].n}</p>`:evo(k)!==null&&html`<p class=${'text-xs '+(evo(k)>=0?'ok':'err')}>${pct(evo(k))} depuis la dernière mise à jour</p>`}</div>`)}</div>
+<p class="text-xs mut mt-3 mb-1">Évolution des abonnés (${H.length} relevé${H.length>1?'s':''})</p><${Line} a=${H.map(x=>x.f)} b=${[]} lab=${'Évolution des abonnés '+OAUTH[p].n}/>
+<div class="flex flex-wrap items-center gap-2 mt-2"><button class="chip" onClick=${refresh}>Actualiser</button><button class="chip" onClick=${off}>Déconnecter</button><span class="text-xs mut">Dernier relevé : ${new Date(c.t).toLocaleDateString('fr-FR',{day:'numeric',month:'long'})}</span></div></div>`}
 function Reseaux({soc,setSoc}){
-const S=useContext(SrvC),pc=useWide(),[m,setM]=useState(null),keys=Object.keys(OAUTH);
-/* Comptes réels (serveur) + comptes de démonstration (navigateur). Un compte réel garde ici seulement les saisies manuelles. */
-const all={};keys.forEach(k=>{if(S.live[k]&&S.live[k].hist&&S.live[k].hist.length)all[k]={...S.live[k],man:(soc[k]&&soc[k].man)||{}};else if(soc[k]&&!soc[k].live)all[k]=soc[k]});
-const on=keys.filter(k=>all[k]);
-const click=async p=>{
-if(S.feat.social.includes(p)){if(!S.user){S.say('Crée un compte pour connecter ton réseau');S.go('reglages');return}
-const r=await API.call('GET','/api/social/'+p+'/connect');if(r.ok&&r.json&&r.json.url)location.href=r.json.url;else S.say((r.json&&r.json.message)||'Connexion impossible pour le moment');return}
-const r=await startOAuth(p);if(!r.configured)setM(p)};
-const set=(p,s)=>setSoc({...soc,[p]:S.live[p]?{live:true,man:s.man}:s});
-const demo=p=>{set(p,{demo:true,name:DEMO[p].name,hist:mkHist(DEMO[p]),man:{}});setM(null)};
-const refresh=async p=>{
-if(S.live[p]){const r=await API.call('POST','/api/social/'+p+'/sync');if(r.ok)S.setLive(r.json.accounts);else S.say(r.status===429?'Un seul relevé par heure':(r.json&&r.json.error)==='connexion_expiree'?'Connexion expirée : déconnecte puis reconnecte ce réseau':'Relevé impossible pour le moment');return}
-const s=soc[p],c=s.hist[s.hist.length-1],g=x=>x==null?null:Math.round(x*(1+Math.random()*.04+.005));set(p,{...s,hist:[...s.hist,{t:Date.now(),f:g(c.f),v:g(c.v),l:g(c.l),p:c.p+1}].slice(-12)})};
-const off=async p=>{if(S.live[p]){const r=await API.call('DELETE','/api/social/'+p);if(!r.ok){S.say('Déconnexion impossible pour le moment');return}const n={...S.live};delete n[p];S.setLive(n)}const n={...soc};delete n[p];setSoc(n)};
+const S=useContext(SrvC),pc=useWide(),keys=Object.keys(OAUTH);
+const all={};keys.forEach(k=>{if(S.live[k]&&S.live[k].hist&&S.live[k].hist.length)all[k]={...S.live[k],man:(soc[k]&&soc[k].man)||{}}});
+const on=keys.filter(k=>all[k]),avail=keys.filter(k=>!all[k]&&S.feat.social.includes(k)),soon=keys.filter(k=>!all[k]&&!S.feat.social.includes(k));
+const click=async p=>{if(!S.user){S.say('Crée un compte pour connecter ton réseau');S.go('reglages');return}
+const r=await API.call('GET','/api/social/'+p+'/connect');if(r.ok&&r.json&&r.json.url)location.href=r.json.url;else S.say((r.json&&r.json.message)||'Connexion impossible pour le moment')};
+const set=(p,s)=>setSoc({...soc,[p]:{live:true,man:s.man}});
+const refresh=async p=>{const r=await API.call('POST','/api/social/'+p+'/sync');if(r.ok)S.setLive(r.json.accounts);else S.say(r.status===429?'Un seul relevé par heure':(r.json&&r.json.error)==='connexion_expiree'?'Connexion expirée : déconnecte puis reconnecte ce réseau':'Relevé impossible pour le moment')};
+const off=async p=>{const r=await API.call('DELETE','/api/social/'+p);if(!r.ok){S.say('Déconnexion impossible pour le moment');return}const n={...S.live};delete n[p];S.setLive(n);const m={...soc};delete m[p];setSoc(m)};
 const tot=on.reduce((a,k)=>a+(all[k].hist[all[k].hist.length-1].f||0),0);
-return html`<section class="card"><h2 class="font-bold">Mes réseaux sociaux</h2><p class="text-sm mut mt-1">Connecte tes comptes : Synthia récupère tes statistiques via l’API officielle, sans jamais te demander ton mot de passe.</p>
-<div class="flex flex-wrap gap-2 mt-3">${keys.filter(k=>!all[k]).map(k=>html`<button key=${k} class="btn" onClick=${()=>click(k)}>Connecter ${OAUTH[k].n}</button>`)}</div>
-${on.length>0&&html`<p class="text-xs rounded-lg p-2 mt-3" style=${{background:'var(--bg)'}}>${on.some(k=>all[k].demo)?'Mode démonstration : ces chiffres sont fictifs. ':''}Total des abonnés connectés : ${N(tot)}</p>`}
-<div class=${pc?'grid grid-cols-3 gap-6 items-start':''}>${on.map(k=>html`<${Net} key=${k} p=${k} s=${all[k]} set=${s=>set(k,s)} refresh=${()=>refresh(k)} off=${()=>off(k)}/>`)}</div>
-${m&&html`<${Consent} p=${m} ok=${()=>demo(m)} close=${()=>setM(null)}/>`}</section>`}
+return html`<section class="card"><h2 class="font-bold">Mes réseaux sociaux</h2><p class="text-sm mut mt-1">Connecte tes comptes : Synthia récupère tes statistiques via l’API officielle, en lecture seule, sans jamais te demander ton mot de passe.</p>
+<div class="flex flex-wrap gap-2 mt-3">${avail.map(k=>html`<button key=${k} class="btn" onClick=${()=>click(k)}>Connecter ${OAUTH[k].n}</button>`)}${soon.map(k=>html`<button key=${k} class="chip" disabled aria-disabled="true" style=${{opacity:.7,cursor:'default'}}>${OAUTH[k].n} · bientôt disponible</button>`)}</div>
+${!on.length&&!avail.length&&html`<p class="text-xs mut mt-3">Les connexions arrivent bientôt. En attendant, saisis tes chiffres dans « Audience » (onglet Profil) : Synthia s’en sert déjà pour ton plan.</p>`}
+${on.length>0&&html`<p class="text-xs rounded-lg p-2 mt-3" style=${{background:'var(--bg)'}}>Total des abonnés connectés : ${N(tot)}</p>`}
+<div class=${pc?'grid grid-cols-3 gap-6 items-start':''}>${on.map(k=>html`<${Net} key=${k} p=${k} s=${all[k]} set=${s=>set(k,s)} refresh=${()=>refresh(k)} off=${()=>off(k)}/>`)}</div></section>`}
 
 /* ---------- Écran 5 : Tableau de bord ---------- */
-function Dash({prof,plan,done,res,go,soc,setSoc,demo,clear,reco}){
+function Dash({prof,plan,done,res,go,soc,setSoc,reco}){
 const pc=useWide();
 const f=res.filter(r=>r.views!==''),S=k=>res.reduce((a,r)=>a+(+r[k]||0),0);
 const ok=res.map((r,i)=>r.views!==''&&+r.views>=OBJ[i].views).filter(Boolean).length;
 const tl=plan?plan.length:0,dn=plan?plan.filter(a=>done.includes(a.id)).length:0,pr=tl?Math.round(dn/tl*100):0,nx=plan?plan.filter(a=>!done.includes(a.id)).slice(0,3):[];
 const agg=k=>{const t={};res.forEach(r=>Object.entries(r.net||{}).forEach(([n,v])=>{t[n]=(t[n]||0)+(+v[k]||0)}));return t},av=agg('v'),ai=agg('i'),top=o=>Object.keys(o).sort((a,b)=>o[b]-o[a]).find(k=>o[k]>0),bv=top(av),bi=top(ai),lr=Object.keys(reco||{}).pop(),tip=lr?(reco[lr].find(t=>/apporte|meilleur réseau/.test(t))||reco[lr][0]):'Génère ton plan, puis renseigne tes résultats chaque semaine : Synthia adaptera tes prochaines actions.';
 const heroC=html`<div class=${'hero rounded-3xl text-white flex items-center justify-between gap-3 '+(pc?'p-8':'p-5')}><div class="min-w-0"><p class="text-teal-200 text-sm">Campagne en cours</p><h1 class="text-2xl font-extrabold break-words">${prof.artist||'Ton nom d’artiste'}</h1><p class="text-sm">${prof.song?'« '+prof.song+' », sortie le '+(prof.date?new Date(prof.date).toLocaleDateString('fr-FR'):'à définir'):'Crée ton profil pour lancer ta campagne.'}</p></div><${Ring} p=${pr}/></div>`;
-const demoC=demo&&html`<div class="card text-sm flex items-center justify-between gap-3"><p>Données de démonstration : les résultats affichés ici sont fictifs.</p><button class="chip shrink-0" onClick=${clear}>Effacer</button></div>`;
 const nextC=nx[0]?html`<div class="card" style=${{borderColor:'var(--pt)',borderWidth:2}}><p class="text-xs mut">Prochaine action prioritaire</p><p class="font-bold mt-1">${nx[0].what}</p><p class="text-sm mut">${nx[0].ch} · ${nx[0].day}${nx[0].date?' '+nx[0].date:''} à ${nx[0].when} · ${nx[0].time}</p><button class="btn mt-3" onClick=${()=>go('plan')}>Voir dans mon plan</button></div>`:tl>0?html`<div class="card" style=${{borderColor:'var(--pt)',borderWidth:2}}><p class="font-bold">Campagne terminée 🎉</p><p class="text-sm mut">Ton bilan est prêt.</p><button class="btn mt-3" onClick=${()=>go('bilan')}>Voir mon bilan</button></div>`:null;
-const bestC=html`<div class="card"><p class="text-xs mut">Meilleur réseau</p><p class="font-bold mt-1">${bv?bv+' (vues)':'Pas encore de données'}</p>${bi&&bi!==bv&&html`<p class="text-sm">${bi} (interactions)</p>`}${bv&&demo&&html`<p class="text-xs mut">Données fictives</p>`}</div>`;
+const bestC=html`<div class="card"><p class="text-xs mut">Meilleur réseau</p><p class="font-bold mt-1">${bv?bv+' (vues)':'Pas encore de données'}</p>${bi&&bi!==bv&&html`<p class="text-sm">${bi} (interactions)</p>`}</div>`;
 const tipC=html`<div class="card"><p class="text-xs mut">Conseil</p><p class="text-sm mt-1">${tip}</p></div>`;
 const kpiC=html`<div class=${'grid gap-3 '+(pc?'grid-cols-6':'grid-cols-2')}>${[['Actions réalisées',dn+' sur '+tl,'check'],['Actions restantes',tl-dn,'music'],['Vues obtenues',N(S('views')),'trend'],['Interactions',N(S('inter')),'spark'],['Nouveaux abonnés',S('subs')?N(S('subs')):'—','user'],['Objectifs atteints',ok+' sur '+f.length,'crown']].map(([l,v,ic])=>html`<div key=${l} class="card"><span style=${{color:'var(--pt)'}}><${I} n=${ic}/></span><p class="text-2xl font-extrabold mt-1">${v}</p><p class="text-sm mut">${l}</p></div>`)}</div>`;
 const resC=html`<${Reseaux} soc=${soc} setSoc=${setSoc}/>`;
 const vuesC=html`<div class="card"><h2 class="font-bold mb-1">Vues par semaine</h2><p class="text-xs mut mb-2">Violet : résultats saisis. Pointillés : objectif prévisionnel.</p><${Line} a=${f.map(r=>+r.views)} b=${OBJ.map(o=>o.views)}/></div>`;
 const listC=html`<div class="card"><h2 class="font-bold mb-2">Prochaines actions</h2>${plan?nx.map(a=>html`<div key=${a.id} class="py-2 border-t first:border-0" style=${{borderColor:'var(--bd)'}}><p class="text-sm font-bold" style=${{color:'var(--pt)'}}>Semaine ${a.w}, ${a.day} à ${a.when}</p><p class="text-sm">${a.ch} : ${a.what}</p></div>`):html`<p class="text-sm mut mb-3">Pas encore de plan.</p><button class="btn" onClick=${()=>go('plan')}>Générer mon plan</button>`}</div>`;
 return pc
-?html`<div class="space-y-4">${heroC}${demoC}<div class="grid grid-cols-3 gap-4 items-stretch">${nextC}${bestC}${tipC}</div>${kpiC}<div class="grid grid-cols-2 gap-4 items-start">${vuesC}${listC}</div>${resC}</div>`
-:html`<div class="space-y-4">${heroC}${demoC}${nextC}<div class="grid grid-cols-2 gap-3">${bestC}${tipC}</div>${kpiC}${resC}${vuesC}${listC}</div>`}
+?html`<div class="space-y-4">${heroC}<div class="grid grid-cols-3 gap-4 items-stretch">${nextC}${bestC}${tipC}</div>${kpiC}<div class="grid grid-cols-2 gap-4 items-start">${vuesC}${listC}</div>${resC}</div>`
+:html`<div class="space-y-4">${heroC}${nextC}<div class="grid grid-cols-2 gap-3">${bestC}${tipC}</div>${kpiC}${resC}${vuesC}${listC}</div>`}
 
 /* ---------- Écran 6 : Suivi hebdomadaire ---------- */
 function Suivi({res,setRes,wk,setWk,go,plan,setPlan,done,prof,reco,setReco}){
@@ -461,12 +423,11 @@ return html`<div class=${'fixed inset-0 z-30 flex justify-center '+(pc?'items-ce
 <h2 id="cf-t" class="font-extrabold text-lg">${title}</h2><p class="text-sm mut mt-2">${text}</p>
 <div class="flex gap-2 mt-4"><button class="btn btn2 flex-1" onClick=${close}>${noLabel||'Annuler'}</button><button class="btn flex-1" onClick=${ok}>${okLabel}</button></div></div></div>`}
 function Reglages({ask,theme,setTheme}){const pc=useWide();
-return html`<div><h1 class="text-2xl font-extrabold">Paramètres</h1><p class="mut text-sm mb-4">Outils pour présenter MANAGER en démonstration.</p>
+return html`<div><h1 class="text-2xl font-extrabold">Paramètres</h1><p class="mut text-sm mb-4">Compte, apparence et données.</p>
 <div class=${pc?'grid grid-cols-2 gap-4 items-start':'space-y-3'}>
 <${Compte}/>
 <div class="card"><h2 class="font-bold">Apparence</h2><p class="text-sm mut mt-1">Choisis le thème de l’application. « Automatique » suit le réglage de ton appareil.</p><div class="flex flex-wrap gap-2 mt-3" role="radiogroup" aria-label="Thème">${['auto','light','dark'].map(k=>html`<button type="button" key=${k} role="radio" aria-checked=${theme===k} class=${'chip inline-flex items-center gap-1.5 '+(theme===k?'on':'')} onClick=${()=>setTheme(k)}><${I} n=${TH[k][1]} s=${14}/>${TH[k][0]}</button>`)}</div></div>
-<div class="card"><h2 class="font-bold">Réinitialiser la démonstration</h2><p class="text-sm mut mt-1">Efface le profil, l’audience, le plan, les actions cochées, les résultats, les réseaux connectés et l’offre choisie. SYNTHIA repart d’un profil vide, comme à la première utilisation. Les autres données de ton navigateur ne sont pas touchées.</p><button class="btn mt-3" onClick=${()=>ask('reset')}><${I} n="reset" s=${18}/> Réinitialiser la démonstration</button></div>
-<div class="card"><h2 class="font-bold">Artiste d’exemple</h2><p class="text-sm mut mt-1">Charge un profil fictif (Zeynab Kora) avec des résultats d’exemple pour montrer rapidement le tableau de bord. Les données actuelles sont remplacées.</p><button class="btn btn2 mt-3" onClick=${()=>ask('ex')}>Charger l’exemple</button></div></div></div>`}
+<div class="card"><h2 class="font-bold">Mes données</h2><p class="text-sm mut mt-1">Efface ton profil, ton audience, ton plan, tes actions cochées, tes résultats et tes anciennes campagnes pour repartir d’un profil vide. Ton compte et ton offre ne sont pas touchés.</p><button class="btn btn2 mt-3" onClick=${()=>ask('reset')}><${I} n="reset" s=${18}/> Repartir de zéro</button></div></div></div>`}
 
 /* ---------- Export PDF (jsPDF, côté navigateur) ---------- */
 function exportPDF(prof,plan,say,offer){
@@ -503,9 +464,7 @@ d.save('Synthia-plan-'+(slug(prof.artist)||'artiste')+'.pdf');say('PDF télécha
 /* ---------- Application ---------- */
 const TABS=[['dash','Tableau de bord','dash'],['plan','Mes plans','spark'],['suivi','Suivi','trend'],['profil','Profil','user']];
 const SIDE=[['home','Accueil','home'],...TABS,['bilan','Bilan','chart'],['offres','Offres','crown'],['reglages','Paramètres','gear']];
-const BLANK={...DEF0,artist:'',song:'',date:'',ville:'',lien:'',bud:null,nets:[]};
 const ST0={tt:'',views:'',ig:'',fb:'',perf:''};
-const ST_EX={tt:3200,views:18500,ig:1450,fb:900,perf:'Mon dernier titre a atteint 5 000 vues en un mois.'};
 const RES_B=()=>[0,1,2,3].map(()=>({pubs:'',views:'',inter:''}));
 /* Supprime uniquement les données propres à Synthia (clés « mgr: » et jetons OAuth « oa: ») */
 const wipe=()=>{try{Object.keys(localStorage).filter(k=>k.indexOf('mgr:')===0).forEach(k=>localStorage.removeItem(k))}catch(e){}try{Object.keys(sessionStorage).filter(k=>k.indexOf('oa:')===0).forEach(k=>sessionStorage.removeItem(k))}catch(e){}};
@@ -527,7 +486,7 @@ const [prof0,setProf]=useLS('prof',BLANK),prof={...DEF0,...prof0};
 const [st,setSt]=useLS('st',ST0);
 const [me,setMe]=useState(null),[live,setLive]=useState({}),[imp,setImp]=useState(false),[resetTok,setResetTok]=useState(null);
 const feat=(me&&me.features)||{ai:[],social:[],payMode:null},user=me&&me.user;
-const [plan,setPlan]=useLS('plan',null),[done,setDone]=useLS('done',[]),[res,setRes]=useLS('res',RES_B()),[soc,setSoc]=useLS('soc',{}),[demo,setDemo]=useLS('demo',false),[reco,setReco]=useLS('reco',{}),offer=user&&user.offer==='PREMIUM'?'PREMIUM':'FREE';
+const [plan,setPlan]=useLS('plan',null),[done,setDone]=useLS('done',[]),[res,setRes]=useLS('res',RES_B()),[soc,setSoc]=useLS('soc',{}),[reco,setReco]=useLS('reco',{}),offer=user&&user.offer==='PREMIUM'?'PREMIUM':'FREE';
 AI_CFG.endpoint=user&&offer==='PREMIUM'&&feat.ai.length?'/api/ai/plan':null;
 const created=!!(prof.artist&&prof.artist.trim())&&!prof.draft;
 const go=p=>{setPage(p);toTop()};
@@ -541,7 +500,7 @@ const say=m=>{setToast(m);setTimeout(()=>setToast(''),Math.max(1800,m.length*50)
 /* Compte : lecture de /api/me, chargement de l’état serveur, import des données d’invité */
 const reloadMe=async()=>{const r=await API.call('GET','/api/me');if(r.ok){setMe(r.json);return r.json}return null};
 const reloadSoc=async()=>{const r=await API.call('GET','/api/social');if(r.ok)setLive(r.json.accounts||{})};
-const DEF_STATE=()=>({prof:BLANK,st:ST0,plan:null,done:[],res:RES_B(),soc:{},demo:false,reco:{},arch:[],seen:{}});
+const DEF_STATE=()=>({prof:BLANK,st:ST0,plan:null,done:[],res:RES_B(),soc:{},reco:{},arch:[],seen:{}});
 const localHasData=()=>!!(prof.artist&&prof.artist.trim())||!!plan;
 const applyServer=state=>{const D=DEF_STATE();Object.keys(D).forEach(k=>{const v=k in state?state[k]:D[k];SYNC.last[k]=JSON.stringify(v);SYNC.reg[k]&&SYNC.reg[k](v)})};
 const loadAccount=async fromLogin=>{const r=await API.call('GET','/api/state');if(!r.ok)return;const stt=r.json.state||{};
@@ -549,7 +508,7 @@ if(Object.keys(stt).length){applyServer(stt);if(fromLogin&&localHasData())say('D
 SYNC.on=true;await reloadSoc()};
 const auth=async(mode,email,password)=>{const r=await API.call('POST','/api/auth/'+mode,{email,password});if(!r.ok)return (r.json&&r.json.message)||'Erreur réseau, réessaie.';await reloadMe();await loadAccount(true);return null};
 const logout=async()=>{await API.call('POST','/api/auth/logout',{});SYNC.on=false;wipe();location.reload()};
-const doImport=async()=>{setImp(false);const r=await API.call('POST','/api/state/import',{state:{prof,st,plan,done,res,soc,demo,reco,arch,seen}});if(r.ok){await loadAccount(false);say('Données importées dans ton compte ✓')}else say('Import impossible pour le moment')};
+const doImport=async()=>{setImp(false);const r=await API.call('POST','/api/state/import',{state:{prof,st,plan,done,res,soc,reco,arch,seen}});if(r.ok){await loadAccount(false);say('Données importées dans ton compte ✓')}else say('Import impossible pour le moment')};
 useEffect(()=>{(async()=>{const m=await reloadMe();if(m&&m.user)await loadAccount(false);
 const q=new URLSearchParams(location.search),pd=q.get('paid'),so=q.get('social'),vt=q.get('verify'),rt=q.get('reset');
 if(vt||rt){try{history.replaceState(null,'',location.pathname)}catch(e){}setPage('reglages');
@@ -558,16 +517,14 @@ if(vt){const r=await API.call('POST','/api/auth/verify',{token:vt});say(r.ok?'Ad
 if(pd||so){try{history.replaceState(null,'',location.pathname)}catch(e){}
 if(pd){const msg={ok:'Paiement confirmé : PREMIUM activé ✓',pending:'Paiement en attente de confirmation. PREMIUM s’activera dès qu’il est validé.',failed:'Paiement refusé ou annulé. Rien n’a été débité.',error:'Paiement introuvable.',login:'Reconnecte-toi pour finaliser ton paiement.'}[pd];if(msg)say(msg);setPage('offres')}
 if(so){const p=q.get('p'),nm=p&&OAUTH[p]?OAUTH[p].n:'Le réseau';say(so==='ok'?nm+' connecté ✓':so==='denied'?'Connexion refusée : rien n’a été partagé.':'Connexion impossible, réessaie.');setPage('dash')}}})()},[]);
-const clear=()=>{setProf(BLANK);setPlan(null);setReco({});setSeen({});setWk(1);setRes(RES_B());setSt(ST0);setSoc({});setDone([]);setDemo(false);say('Données de démonstration effacées')};
-const resetAll=()=>{setConf(null);setBusy(false);setProf(BLANK);setSt(ST0);setPlan(null);setDone([]);setRes(RES_B());setSoc({});setDemo(false);setReco({});setSeen({});setArch([]);setWk(1);go('profil');say('Démonstration réinitialisée ✓');wipe();setTimeout(wipe,200)};
-const loadEx=()=>{setConf(null);setProf(DEF0);setSt(ST_EX);setRes(RES0);setDone([0,1,2,3,4,5]);setPlan(null);setReco({});setSeen({w1:1,w2:1});setSoc({});setWk(1);setDemo(true);go('dash');say('Artiste d’exemple chargé ✓')};
+const resetAll=()=>{setConf(null);setBusy(false);setProf(BLANK);setSt(ST0);setPlan(null);setDone([]);setRes(RES_B());setSoc({});setReco({});setSeen({});setArch([]);setWk(1);go('profil');say('Données effacées ✓');wipe();setTimeout(wipe,200)};
 const copy=(t,m='Texte copié ✓')=>{const fb=()=>{const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy')}catch(e){}a.remove();say(m)};try{navigator.clipboard.writeText(t).then(()=>say(m),fb)}catch(e){fb()}};
 const share=async()=>{const t=plan.map(a=>`S${a.w} ${a.day} ${a.when} – ${a.ch} : ${a.what}`).join('\n');try{if(navigator.share){await navigator.share({title:'Mon plan Synthia',text:t});return}}catch(e){}copy(t,'Plan copié, prêt à partager ✓')};
 const gen=async()=>{setBusy(true);try{const np=await AI.generatePlan(prof,st);if(plan&&offer==='PREMIUM'){setArch([snap(),...arch].slice(0,50));setRes(RES_B())}setPlan(np);setReco({});setSeen({});setDone([]);setWk(1)}finally{setBusy(false)}};
 const pdf=()=>{if(offer!=='PREMIUM'){setConf('pdf');return}exportPDF(prof,plan,say,offer)};
 /* Une campagne = profil du morceau + plan + actions cochées + résultats + conseils + états « vu » */
 const snap=()=>({prof,plan,done,res,reco,seen});
-const newCamp=()=>{setConf(null);if(offer==='PREMIUM')setArch([snap(),...arch].slice(0,50));setProf({...prof,song:'',date:'',lien:'',draft:true});setPlan(null);setDone([]);setRes(RES_B());setReco({});setSeen({});setWk(1);setDemo(false);go('profil');say(offer==='PREMIUM'?'Ancienne campagne gardée dans « Mes autres plans » ✓':'Nouvelle campagne : l’ancien plan est remplacé ✓')};
+const newCamp=()=>{setConf(null);if(offer==='PREMIUM')setArch([snap(),...arch].slice(0,50));setProf({...prof,song:'',date:'',lien:'',draft:true});setPlan(null);setDone([]);setRes(RES_B());setReco({});setSeen({});setWk(1);go('profil');say(offer==='PREMIUM'?'Ancienne campagne gardée dans « Mes autres plans » ✓':'Nouvelle campagne : l’ancien plan est remplacé ✓')};
 const open=(i,to)=>{const a=arch[i];setArch([...(plan?[snap()]:[]),...arch.filter((_,j)=>j!==i)]);setProf(a.prof);setPlan(a.plan);setDone(a.done||[]);setRes(a.res||RES_B());setReco(a.reco||{});setSeen(a.seen||{w1:1,w2:1,w3:1,w4:1,bilan:1});setWk(1);say('Plan ouvert ✓');if(to)go(to)};
 const tog=id=>setDone(d=>d.includes(id)?d.filter(x=>x!==id):[...d,id]);
 const buy=async o=>{if(o.k==='FREE'){say(offer==='PREMIUM'?'PREMIUM reste actif jusqu’à sa date de fin':'Offre gratuite active ✓');return}
@@ -578,22 +535,21 @@ const body={home:html`<${Home} go=${go}/>`,
 profil:html`<div class=${wide?'grid grid-cols-5 gap-6 items-start':'space-y-6'}><div class=${wide?'col-span-3':''}><${Profil} prof=${prof} save=${saveProf} go=${go}/></div><div class=${'space-y-6 '+(wide?'col-span-2':'')}><${Audience} st=${st} save=${setSt} go=${go}/><button class="btn btn2 w-full" onClick=${()=>go('offres')}>Voir les abonnements</button></div></div>`,
 audience:html`<${Audience} st=${st} save=${setSt} go=${go}/>`,
 plan:html`<${Plan} plan=${plan} gen=${gen} busy=${busy} done=${done} tog=${tog} wk=${wk} setWk=${setWk} copy=${copy} share=${share} go=${go} pdf=${pdf} arch=${arch} open=${open} offer=${offer} created=${created}/>`,
-dash:html`<${Dash} prof=${prof} plan=${plan} done=${done} res=${res} go=${go} soc=${soc} setSoc=${setSoc} demo=${demo} clear=${clear} reco=${reco}/>`,
+dash:html`<${Dash} prof=${prof} plan=${plan} done=${done} res=${res} go=${go} soc=${soc} setSoc=${setSoc} reco=${reco}/>`,
 suivi:html`<${Suivi} res=${res} setRes=${setRes} wk=${wk} setWk=${setWk} go=${go} plan=${plan} setPlan=${setPlan} done=${done} prof=${prof} reco=${reco} setReco=${setReco}/>`,
 bilan:html`<${Bilan} plan=${plan} done=${done} res=${res} prof=${prof} offer=${offer} go=${go} setWk=${setWk} newC=${()=>setConf('new')}/>`,
 offres:html`<${Offres} offer=${offer} buy=${buy}/>`,
 reglages:html`<${Reglages} ask=${setConf} theme=${theme} setTheme=${setTheme}/>`}[page];
-const demoBar=demo&&html`<div class="card text-xs flex items-center justify-between gap-3" role="note"><span>Mode démo : profil, audience et résultats d’exemple, tous fictifs.</span><button class="chip shrink-0" onClick=${()=>{clear();go('profil')}}>Repartir de zéro</button></div>`;
-const CF={new:{title:'Lancer une nouvelle campagne ?',text:offer==='PREMIUM'?'Ta campagne actuelle est gardée dans « Mes autres plans », avec ses résultats et son bilan. Tu pourras la rouvrir à tout moment. Tu vas saisir les informations de ton nouveau morceau.':'Avec l’offre FREE, le nouveau plan remplace l’actuel : son suivi et son bilan ne seront plus accessibles. PREMIUM permet de garder tes anciennes campagnes. Tu vas saisir les informations de ton nouveau morceau.',okLabel:'Lancer la campagne',ok:newCamp},pdf:{title:'Le PDF complet est réservé à PREMIUM',text:'Avec l’offre FREE, tu consultes ton plan de promotion directement dans Synthia. Passe à PREMIUM pour télécharger ton plan complet (morceau, objectifs, actions et calendrier sur 4 semaines) au format PDF.',okLabel:'Voir PREMIUM',no:'Fermer',ok:()=>{setConf(null);go('offres')}},reset:{title:'Réinitialiser la démonstration ?',text:'Cette action supprimera les données enregistrées dans la démonstration actuelle : profil artiste, audience, plan de promotion, actions cochées, résultats de suivi, réseaux connectés et offre choisie. Tu repartiras d’un profil vide. Cette action est définitive.',okLabel:'Oui, réinitialiser',ok:resetAll},ex:{title:'Charger l’artiste d’exemple ?',text:'Les données actuelles de la démonstration seront remplacées par un profil fictif (Zeynab Kora) et des résultats d’exemple.',okLabel:'Charger l’exemple',ok:loadEx}};
+const CF={new:{title:'Lancer une nouvelle campagne ?',text:offer==='PREMIUM'?'Ta campagne actuelle est gardée dans « Mes autres plans », avec ses résultats et son bilan. Tu pourras la rouvrir à tout moment. Tu vas saisir les informations de ton nouveau morceau.':'Avec l’offre FREE, le nouveau plan remplace l’actuel : son suivi et son bilan ne seront plus accessibles. PREMIUM permet de garder tes anciennes campagnes. Tu vas saisir les informations de ton nouveau morceau.',okLabel:'Lancer la campagne',ok:newCamp},pdf:{title:'Le PDF complet est réservé à PREMIUM',text:'Avec l’offre FREE, tu consultes ton plan de promotion directement dans Synthia. Passe à PREMIUM pour télécharger ton plan complet (morceau, objectifs, actions et calendrier sur 4 semaines) au format PDF.',okLabel:'Voir PREMIUM',no:'Fermer',ok:()=>{setConf(null);go('offres')}},reset:{title:'Repartir de zéro ?',text:'Ton profil, ton audience, ton plan, les actions cochées, tes résultats et tes campagnes gardées seront effacés'+(user?', sur cet appareil et dans ton compte (ton compte et ton offre restent)':' de ce navigateur')+'. Cette action est définitive.',okLabel:'Oui, tout effacer',ok:resetAll}};
 const overlays=html`<${React.Fragment}>${imp&&html`<${Confirm} title="Importer tes données ?" text="Ce navigateur contient déjà un profil ou un plan. Veux-tu les enregistrer dans ton compte pour les retrouver partout ?" okLabel="Importer" noLabel="Plus tard" ok=${doImport} close=${()=>setImp(false)}/>`}${conf&&html`<${Confirm} title=${CF[conf].title} text=${CF[conf].text} okLabel=${CF[conf].okLabel} ok=${CF[conf].ok} noLabel=${CF[conf].no} close=${()=>setConf(null)}/>`}${wkEnd&&!conf&&html`<${Confirm} title=${'Semaine '+wkEnd+' terminée 🎉'} text=${'Tu as terminé toutes les actions de la semaine '+wkEnd+'. Renseigne maintenant les résultats obtenus (vues, écoutes, abonnés, interactions) pour que Synthia les compare à tes objectifs.'} okLabel="Saisir mes résultats" noLabel="Plus tard" ok=${()=>{const w=wkEnd;setWkEnd(null);setWk(w);go('suivi')}} close=${()=>setWkEnd(null)}/>`}${toast&&html`<div class="fixed left-1/2 -translate-x-1/2 z-40 px-4 py-2 rounded-full text-sm text-white max-w-[90%] text-center" style=${{bottom:'calc('+(wide?'2rem':'5rem')+' + env(safe-area-inset-bottom,0px))',background:'#0B2220'}} role="status">${toast}</div>`}<//>`;
 const side=html`<aside class="fixed inset-y-0 left-0 w-64 z-20 border-r flex flex-col p-4" style=${{background:'var(--card)',borderColor:'var(--bd)'}}><div class="flex items-center justify-between gap-2"><button class="tab" aria-label="Accueil" onClick=${()=>go('home')}><${Logo}/></button><button class="chip text-xs" onClick=${()=>go('offres')}>${offer}</button></div>
 <nav class="mt-6 flex-1 space-y-1 overflow-y-auto" aria-label="Navigation principale">${SIDE.map(([k,l,ic])=>html`<button key=${k} class=${'tab side flex items-center gap-3 w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium '+(page===k?'on':'')} aria-current=${page===k?'page':null} onClick=${()=>go(k)}><${I} n=${ic} s=${20}/>${l}</button>`)}</nav>
-<div class="space-y-2">${dp&&html`<${InstBtn} go=${install} cls="w-full justify-center py-2"/>`}<${ThemeBtn} theme=${theme} cycle=${cycle} text=${true} cls="w-full justify-center py-2"/><${ModeBtn} view=${view} toggle=${toggle} cls="w-full justify-center py-2"/><button class="chip w-full inline-flex items-center justify-center gap-2 py-2" onClick=${()=>setConf('reset')}><${I} n="reset" s=${16}/> Réinitialiser la démonstration</button></div></aside>`;
+<div class="space-y-2">${dp&&html`<${InstBtn} go=${install} cls="w-full justify-center py-2"/>`}<${ThemeBtn} theme=${theme} cycle=${cycle} text=${true} cls="w-full justify-center py-2"/><${ModeBtn} view=${view} toggle=${toggle} cls="w-full justify-center py-2"/></div></aside>`;
 const header=html`<header class="max-w-2xl mx-auto px-4 pt-4 flex justify-between items-center gap-2"><button class="tab" aria-label="Accueil" onClick=${()=>go('home')}><${Logo}/></button><div class="flex flex-wrap justify-end items-center gap-2">${!framed&&dp&&html`<${InstBtn} go=${install}/>`}${!framed&&html`<${ModeBtn} view=${view} toggle=${toggle}/>`}<${ThemeBtn} theme=${theme} cycle=${cycle} cls="p-2"/><button class=${'chip p-2 '+(page==='reglages'?'on':'')} aria-label="Paramètres" onClick=${()=>go('reglages')}><${I} n="gear" s=${18}/></button><button class="chip text-xs" onClick=${()=>go('offres')}>${offer}</button></div></header>`;
 const bottomNav=html`<nav class="fixed bottom-0 inset-x-0 z-20 border-t" style=${{background:'var(--card)',borderColor:'var(--bd)',paddingBottom:'env(safe-area-inset-bottom,0px)'}}><div class="max-w-2xl mx-auto grid grid-cols-4">${TABS.map(([k,l,ic])=>html`<button key=${k} class=${'tab flex flex-col items-center gap-0.5 py-2 '+((page===k||(k==='profil'&&page==='offres'))?'on':'')} aria-current=${page===k?'page':null} onClick=${()=>go(k)}><${I} n=${ic} s=${20}/><span style=${{fontSize:10}}>${l}</span></button>`)}</div></nav>`;
-const mobTop=html`<${React.Fragment}>${header}${demoBar&&html`<div class="max-w-2xl mx-auto px-4 pt-3">${demoBar}</div>`}<main key=${page} class="max-w-2xl mx-auto px-4 pt-4 pb-28 pg">${body}</main><//>`;
+const mobTop=html`<${React.Fragment}>${header}<main key=${page} class="max-w-2xl mx-auto px-4 pt-4 pb-28 pg">${body}</main><//>`;
 const shell=wide
-?html`<div class="min-h-screen">${side}<div class="ml-64"><main key=${page} class="max-w-6xl mx-auto px-8 py-8 pg">${demoBar&&html`<div class="mb-4">${demoBar}</div>`}${body}</main></div>${overlays}</div>`
+?html`<div class="min-h-screen">${side}<div class="ml-64"><main key=${page} class="max-w-6xl mx-auto px-8 py-8 pg">${body}</main></div>${overlays}</div>`
 :framed
 ?html`<div class="stage"><div class="fixed top-4 right-4 z-50 flex items-center gap-2">${dp&&html`<${InstBtn} go=${install}/>`}<${ThemeBtn} theme=${theme} cycle=${cycle}/><${ModeBtn} view=${view} toggle=${toggle}/></div><div class="phone"><div id="scroller" class="phone-sc">${mobTop}</div>${bottomNav}${overlays}</div></div>`
 :html`<div>${mobTop}${bottomNav}${overlays}</div>`;
