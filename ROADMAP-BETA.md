@@ -37,7 +37,7 @@ Lot 1 → Lot 3 (déploiement bêta) → Lot 2 en parallèle (délais des platef
 
 ## Fait depuis (Synthia)
 
-- Rebaptisé Synthia, thème clair / sombre, palette teal / orange / lime.
+- Rebaptisé Synthia, thème clair / sombre, palettes violet (défaut) / teal / personnalisée (image ou vidéo de l'utilisateur).
 - Éléments de démonstration retirés, nouvelles fonctions du front (agenda .ics, WhatsApp, textes modifiables, démarrage guidé, Aide), sécurité du compte.
 - Reste du lot « refonte du front » : écrans de l'onboarding en plusieurs pas, retours utilisateurs de la bêta.
 - Déclencheurs inchangés : domaine, clés FedaPay / IA, dossiers de revue des plateformes, relecture juridique des pages légales (placeholders `[À FAIRE VALIDER]`).

@@ -110,7 +110,7 @@ Détails et décisions : `DESIGN-SYNTHIA.md`.
 
 - **Nom** : Synthia (se prononce comme Cynthia ; « synth » + « IA »). Le projet s'appelait Manager.
   Gardés volontairement pour ne rien casser : le fichier de base par défaut `data/manager.db`, le volume Docker `manager-data`, les clés `mgr:*` du navigateur et les sauvegardes `manager-*.db`.
-- **Thème** : automatique (système), clair ou sombre, bouton dans le menu, l'en-tête et Paramètres. `node scripts/check-contrast.js` vérifie les contrastes WCAG des deux thèmes.
+- **Thème** : mode automatique (système), clair ou sombre ; palette **violet** (défaut, celle de l'app de l'équipe), **teal**, ou **personnalisée** : l'utilisateur importe une image ou une vidéo et Synthia en tire ses couleurs (teinte dominante + accent), avec correction automatique pour garder des contrastes ≥ 4,5:1. Le fichier est lu dans le navigateur, jamais envoyé ni gardé ; seules les couleurs (et une miniature pour le bandeau) restent dans le navigateur. `node scripts/check-contrast.js` vérifie les palettes fixes, l'e2e vérifie la palette personnalisée image par image.
 - **Fonctions** : export du plan vers l'agenda (.ics), partage WhatsApp, texte d'action modifiable, démarrage guidé, page Aide, changement de mot de passe, déconnexion de tous les appareils, écran de secours et bandeau hors ligne.
 - **Retiré** : artiste d'exemple, mode démo, faux comptes de réseaux sociaux, délai artificiel.
 - `SUPPORT_EMAIL` : adresse de contact de la page Aide.

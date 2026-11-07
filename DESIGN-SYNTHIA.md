@@ -22,7 +22,7 @@ Base : `DESIGN-MVP.md` (serveur, comptes, paiement, IA, réseaux) et `docs-front
 
 ## 3. Identité visuelle
 
-Le deck a quitté le violet (teal + orange + lime). L'application suit, pour une seule identité.
+Valeurs de la palette **teal** (deck recoloré). Attention : depuis la section 10, la palette par défaut est le violet d'origine ; le teal est un choix.
 
 | Rôle | Clair | Sombre |
 |---|---|---|
