@@ -18,6 +18,25 @@ npm start                   # http://localhost:3000
 
 Sans aucune clé, tout fonctionne sauf l'IA et les réseaux réels : paiement en **simulation** (`PAY_MODE=simulate`), réseaux en mode démo.
 
+### Scripts de lancement (installent les dépendances, créent `.env`, démarrent le serveur)
+
+| Système | Commande |
+|---|---|
+| Windows | double-clic sur `scripts\start-windows.bat` |
+| macOS | `./scripts/start-mac.sh` (ou double-clic sur `scripts/start-mac.command`) |
+| Ubuntu / Debian | `./scripts/start-ubuntu.sh` |
+
+Si Node 22+ manque, le script propose de l'installer (winget, Homebrew ou NodeSource) et attend ta réponse. `.env` est créé une seule fois, avec une `TOKEN_KEY` générée.
+
+### Docker
+
+```bash
+node scripts/setup.js        # crée .env (TOKEN_KEY) ; ou : cp .env.example .env
+docker compose up --build    # http://localhost:3000, base SQLite dans le volume « manager-data »
+```
+
+`docker-compose.yml` tourne en mode développement (paiement simulé possible). Pour un vrai déploiement : `NODE_ENV=production`, `APP_URL` en https, `PAY_MODE=fedapay` dans `.env`, derrière un proxy HTTPS.
+
 ## Variables d'environnement
 
 | Variable | Rôle |
@@ -57,7 +76,7 @@ Tout ce qui touche un service externe a été testé **contre des faux serveurs 
 
 ## Déploiement
 
-Docker : `docker build -t manager . && docker run -p 3000:3000 -v manager-data:/data --env-file .env manager`.
+Docker : voir plus haut (`docker compose`), ou `docker build -t manager . && docker run -p 3000:3000 -v manager-data:/data --env-file .env manager`.
 Mettre un proxy HTTPS devant (le cookie de session est `Secure` en production, `trust proxy` est activé).
 Une seule instance : la base est un fichier SQLite et la limitation de débit est en mémoire.
 
