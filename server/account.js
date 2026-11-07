@@ -32,9 +32,9 @@ function mount(deps, overrides = {}) {
     q.addTok.run(sha256(tok), user.id, kind, Date.now() + (kind === 'reset' ? HOUR : 24 * HOUR));
     const link = `${cfg.appUrl}/?${kind}=${tok}`;
     const text = kind === 'reset'
-      ? `Bonjour,\n\nPour choisir un nouveau mot de passe Manager, ouvre ce lien (valable 1 heure) :\n${link}\n\nSi tu n'as rien demandé, ignore ce message : ton mot de passe ne change pas.`
-      : `Bonjour,\n\nConfirme ton adresse e-mail Manager avec ce lien (valable 24 heures) :\n${link}\n`;
-    await mailer.send({ to: user.email, subject: kind === 'reset' ? 'Manager : nouveau mot de passe' : 'Manager : confirme ton adresse e-mail', text });
+      ? `Bonjour,\n\nPour choisir un nouveau mot de passe Synthia, ouvre ce lien (valable 1 heure) :\n${link}\n\nSi tu n'as rien demandé, ignore ce message : ton mot de passe ne change pas.`
+      : `Bonjour,\n\nConfirme ton adresse e-mail Synthia avec ce lien (valable 24 heures) :\n${link}\n`;
+    await mailer.send({ to: user.email, subject: kind === 'reset' ? 'Synthia : nouveau mot de passe' : 'Synthia : confirme ton adresse e-mail', text });
   }
   deps.afterRegister = (user) => sendToken(user, 'verify');
 
@@ -80,7 +80,7 @@ function mount(deps, overrides = {}) {
     app.get('/api/me/export', deps.requireUser, (req, res) => {
       const u = req.user, state = {};
       for (const r of q.state.all(u.id)) { try { state[r.key] = JSON.parse(r.json); } catch (e) { /* ignorée */ } }
-      res.set('Content-Disposition', 'attachment; filename="manager-mes-donnees.json"');
+      res.set('Content-Disposition', 'attachment; filename="synthia-mes-donnees.json"');
       res.json({
         exportedAt: new Date().toISOString(),
         account: { email: u.email, emailVerified: !!u.email_verified, createdAt: u.created_at, premiumUntil: u.premium_until || null, aiProvider: u.ai_provider },

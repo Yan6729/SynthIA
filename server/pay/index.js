@@ -63,7 +63,7 @@ function mount(deps, overrides = {}) {
       const id = q.insert.run(req.user.id, 'PREMIUM', amount, client.mode, 'pending', Date.now()).lastInsertRowid;
       try {
         const out = await client.createCheckout({
-          amount, description: 'Manager PREMIUM (30 jours)', email: req.user.email,
+          amount, description: 'Synthia PREMIUM (30 jours)', email: req.user.email,
           callbackUrl: `${cfg.appUrl}/api/pay/return?p=${id}`,
         });
         q.setTx.run(out.txId, id);
@@ -95,7 +95,7 @@ function mount(deps, overrides = {}) {
         if (!t) return res.status(404).send('Transaction inconnue');
         res.type('html').send(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Paiement (simulation)</title>
 <body style="font-family:system-ui;max-width:380px;margin:12vh auto;padding:0 16px;text-align:center">
-<h1 style="font-size:20px">Paiement simulé</h1><p>Manager PREMIUM, <b>${Number(t.amount)} FCFA</b></p>
+<h1 style="font-size:20px">Paiement simulé</h1><p>Synthia PREMIUM, <b>${Number(t.amount)} FCFA</b></p>
 <p style="font-size:13px;color:#666">Mode développement : aucun argent n’est débité.</p>
 <form method="post" action="/api/pay/simulate/${encodeURIComponent(req.params.tx)}/decide" style="display:grid;gap:8px;margin-top:20px">
 <button name="status" value="approved" style="padding:12px;font-size:16px">Payer</button>

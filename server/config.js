@@ -15,7 +15,7 @@ function loadConfig(env = process.env) {
     publicDir: path.join(__dirname, '..', 'public'),
     sessionDays: 30,
     logRequests: env.LOG_REQUESTS ? env.LOG_REQUESTS === '1' : prod,
-    mail: { mode: env.MAIL_MODE || (env.RESEND_API_KEY ? 'resend' : 'console'), key: env.RESEND_API_KEY, from: env.MAIL_FROM || 'Manager <no-reply@localhost>', base: env.RESEND_BASE || 'https://api.resend.com' },
+    mail: { mode: env.MAIL_MODE || (env.RESEND_API_KEY ? 'resend' : 'console'), key: env.RESEND_API_KEY, from: env.MAIL_FROM || 'Synthia <no-reply@localhost>', base: env.RESEND_BASE || 'https://api.resend.com' },
     ai: {
       default: env.AI_DEFAULT || 'claude',
       dailyQuota: int(env.AI_DAILY_QUOTA, 30),

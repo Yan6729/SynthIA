@@ -20,4 +20,4 @@ const errs = validateConfig(cfg);
 if (errs.length) { console.error('Configuration invalide :\n - ' + errs.join('\n - ')); process.exit(1); }
 
 const app = createApp(buildDeps(cfg));
-app.listen(cfg.port, () => console.log(`Manager sur ${cfg.appUrl} (port ${cfg.port}, paiement : ${cfg.pay.mode})`));
+app.listen(cfg.port, () => console.log(`Synthia sur ${cfg.appUrl} (port ${cfg.port}, paiement : ${cfg.pay.mode})`));
