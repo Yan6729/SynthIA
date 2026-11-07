@@ -306,22 +306,30 @@ ${o.note&&html`<p class="text-xs mut mt-2">${o.note}</p>`}
 function Net({p,s,set,refresh,off}){
 const H=s.hist,c=H[H.length-1],pv=H[H.length-2],evo=k=>pv&&c[k]!=null&&pv[k]>0?Math.round((c[k]-pv[k])/pv[k]*1000)/10:null;
 return html`<div class="mt-4 pt-4 border-t" style=${{borderColor:'var(--bd)'}}>
-<div class="flex items-center gap-3"><span class="w-11 h-11 rounded-full grid place-items-center text-white font-bold bar" aria-hidden="true">${s.name.replace('@','')[0].toUpperCase()}</span><div class="flex-1 min-w-0"><p class="font-semibold truncate">${s.name}</p><p class="text-xs mut">${OAUTH[p].n}${s.demo?' · données fictives (démo)':''}</p></div></div>
+<div class="flex items-center gap-3"><span class="w-11 h-11 rounded-full grid place-items-center text-white font-bold bar" aria-hidden="true">${(s.name||OAUTH[p].n).replace('@','')[0].toUpperCase()}</span><div class="flex-1 min-w-0"><p class="font-semibold truncate">${s.name||OAUTH[p].n}</p><p class="text-xs mut">${OAUTH[p].n}${s.demo?' · données fictives (démo)':s.live?' · connecté':''}</p>${s.status==='expired'&&html`<p class="text-xs" style=${{color:'#dc2626'}}>Connexion expirée : déconnecte puis reconnecte ce réseau.</p>`}</div></div>
 <div class="grid grid-cols-2 gap-2 mt-3">${MET.map(([k,l])=>html`<div key=${k} class="rounded-xl p-3" style=${{background:'var(--bg)'}}>${c[k]==null?html`<input type="number" min="0" inputMode="numeric" class="inp" placeholder="Saisie manuelle" value=${s.man[k]??''} onInput=${e=>set({...s,man:{...s.man,[k]:e.target.value===''?'':+e.target.value}})}/>`:html`<p class="text-xl font-extrabold">${N(c[k])}</p>`}<p class="text-sm mut">${l}</p>${c[k]==null?html`<p class="text-xs mut">Non fournie par l’API</p>`:evo(k)!==null&&html`<p class="text-xs" style=${{color:evo(k)>=0?'#16a34a':'#dc2626'}}>${pct(evo(k))} depuis la dernière mise à jour</p>`}</div>`)}</div>
 <p class="text-xs mut mt-3 mb-1">Évolution des abonnés (${H.length} relevés${s.demo?', fictifs et simulés':''})</p><${Line} a=${H.map(x=>x.f)} b=${[]} lab=${'Évolution des abonnés '+OAUTH[p].n}/>
 <div class="flex flex-wrap items-center gap-2 mt-2"><button class="chip" onClick=${refresh}>${s.demo?'Simuler une actualisation (démo)':'Actualiser'}</button><button class="chip" onClick=${off}>Déconnecter</button><span class="text-xs mut">Dernier relevé : ${new Date(c.t).toLocaleDateString('fr-FR',{day:'numeric',month:'long'})}</span></div></div>`}
 function Reseaux({soc,setSoc}){
-const pc=useWide(),[m,setM]=useState(null),keys=Object.keys(OAUTH),on=keys.filter(k=>soc[k]);
-const click=async p=>{const r=await startOAuth(p);if(!r.configured)setM(p)};
-const set=(p,s)=>setSoc({...soc,[p]:s});
+const S=useContext(SrvC),pc=useWide(),[m,setM]=useState(null),keys=Object.keys(OAUTH);
+/* Comptes réels (serveur) + comptes de démonstration (navigateur). Un compte réel garde ici seulement les saisies manuelles. */
+const all={};keys.forEach(k=>{if(S.live[k]&&S.live[k].hist&&S.live[k].hist.length)all[k]={...S.live[k],man:(soc[k]&&soc[k].man)||{}};else if(soc[k]&&!soc[k].live)all[k]=soc[k]});
+const on=keys.filter(k=>all[k]);
+const click=async p=>{
+if(S.feat.social.includes(p)){if(!S.user){S.say('Crée un compte pour connecter ton réseau');S.go('reglages');return}
+const r=await API.call('GET','/api/social/'+p+'/connect');if(r.ok&&r.json&&r.json.url)location.href=r.json.url;else S.say((r.json&&r.json.message)||'Connexion impossible pour le moment');return}
+const r=await startOAuth(p);if(!r.configured)setM(p)};
+const set=(p,s)=>setSoc({...soc,[p]:S.live[p]?{live:true,man:s.man}:s});
 const demo=p=>{set(p,{demo:true,name:DEMO[p].name,hist:mkHist(DEMO[p]),man:{}});setM(null)};
-const refresh=p=>{const s=soc[p],c=s.hist[s.hist.length-1],g=x=>x==null?null:Math.round(x*(1+Math.random()*.04+.005));set(p,{...s,hist:[...s.hist,{t:Date.now(),f:g(c.f),v:g(c.v),l:g(c.l),p:c.p+1}].slice(-12)})};
-const off=p=>{const n={...soc};delete n[p];setSoc(n)};
-const tot=on.reduce((a,k)=>a+(soc[k].hist[soc[k].hist.length-1].f||0),0);
+const refresh=async p=>{
+if(S.live[p]){const r=await API.call('POST','/api/social/'+p+'/sync');if(r.ok)S.setLive(r.json.accounts);else S.say(r.status===429?'Un seul relevé par heure':(r.json&&r.json.error)==='connexion_expiree'?'Connexion expirée : déconnecte puis reconnecte ce réseau':'Relevé impossible pour le moment');return}
+const s=soc[p],c=s.hist[s.hist.length-1],g=x=>x==null?null:Math.round(x*(1+Math.random()*.04+.005));set(p,{...s,hist:[...s.hist,{t:Date.now(),f:g(c.f),v:g(c.v),l:g(c.l),p:c.p+1}].slice(-12)})};
+const off=async p=>{if(S.live[p]){const r=await API.call('DELETE','/api/social/'+p);if(!r.ok){S.say('Déconnexion impossible pour le moment');return}const n={...S.live};delete n[p];S.setLive(n)}const n={...soc};delete n[p];setSoc(n)};
+const tot=on.reduce((a,k)=>a+(all[k].hist[all[k].hist.length-1].f||0),0);
 return html`<section class="card"><h2 class="font-bold">Mes réseaux sociaux</h2><p class="text-sm mut mt-1">Connecte tes comptes : Manager récupère tes statistiques via l’API officielle, sans jamais te demander ton mot de passe.</p>
-<div class="flex flex-wrap gap-2 mt-3">${keys.filter(k=>!soc[k]).map(k=>html`<button key=${k} class="btn" onClick=${()=>click(k)}>Connecter ${OAUTH[k].n}</button>`)}</div>
-${on.length>0&&html`<p class="text-xs rounded-lg p-2 mt-3" style=${{background:'var(--bg)'}}>${on.some(k=>soc[k].demo)?'Mode démonstration : aucune API n’est configurée, ces chiffres sont fictifs. ':''}Total des abonnés connectés : ${N(tot)}</p>`}
-<div class=${pc?'grid grid-cols-3 gap-6 items-start':''}>${on.map(k=>html`<${Net} key=${k} p=${k} s=${soc[k]} set=${s=>set(k,s)} refresh=${()=>refresh(k)} off=${()=>off(k)}/>`)}</div>
+<div class="flex flex-wrap gap-2 mt-3">${keys.filter(k=>!all[k]).map(k=>html`<button key=${k} class="btn" onClick=${()=>click(k)}>Connecter ${OAUTH[k].n}</button>`)}</div>
+${on.length>0&&html`<p class="text-xs rounded-lg p-2 mt-3" style=${{background:'var(--bg)'}}>${on.some(k=>all[k].demo)?'Mode démonstration : ces chiffres sont fictifs. ':''}Total des abonnés connectés : ${N(tot)}</p>`}
+<div class=${pc?'grid grid-cols-3 gap-6 items-start':''}>${on.map(k=>html`<${Net} key=${k} p=${k} s=${all[k]} set=${s=>set(k,s)} refresh=${()=>refresh(k)} off=${()=>off(k)}/>`)}</div>
 ${m&&html`<${Consent} p=${m} ok=${()=>demo(m)} close=${()=>setM(null)}/>`}</section>`}
 
 /* ---------- Écran 5 : Tableau de bord ---------- */
