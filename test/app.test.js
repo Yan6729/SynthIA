@@ -11,6 +11,9 @@ test('healthz, en-têtes de sécurité, front servi', async () => {
   assert.equal(h.headers.get('x-content-type-options'), 'nosniff');
   assert.match(h.headers.get('content-security-policy'), /frame-ancestors 'none'/);
   assert.match(h.headers.get('content-security-policy'), /media-src 'self' blob:/);
+  assert.match(h.headers.get('content-security-policy'), /style-src 'self' 'unsafe-inline' https:\/\/fonts\.googleapis\.com/);
+  assert.match(h.headers.get('content-security-policy'), /font-src 'self' https:\/\/fonts\.gstatic\.com/);
+  assert.doesNotMatch(h.headers.get('content-security-policy'), /script-src[^;]*https:/); // aucun script externe autorisé
   const idx = await c.get('/');
   assert.equal(idx.status, 200);
   assert.match(idx.text, /Synthia/);

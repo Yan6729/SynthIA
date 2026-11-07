@@ -24,7 +24,8 @@ function securityHeaders(cfg) {
   const csp = [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline'", // le front de l'équipe contient un script inline (dette notée dans DESIGN-MVP.md)
-    "style-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // feuille de style des polices Google, chargée seulement si l'utilisateur en choisit une
+    "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob:",
     "media-src 'self' blob:", // vidéo choisie pour le thème : lue dans le navigateur, jamais envoyée
     "connect-src 'self'",
