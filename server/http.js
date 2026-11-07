@@ -26,6 +26,7 @@ function securityHeaders(cfg) {
     "script-src 'self' 'unsafe-inline'", // le front de l'équipe contient un script inline (dette notée dans DESIGN-MVP.md)
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
+    "media-src 'self' blob:", // vidéo choisie pour le thème : lue dans le navigateur, jamais envoyée
     "connect-src 'self'",
     "manifest-src 'self'",
     "worker-src 'self'",

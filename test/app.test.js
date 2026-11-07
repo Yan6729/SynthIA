@@ -10,6 +10,7 @@ test('healthz, en-têtes de sécurité, front servi', async () => {
   assert.equal(h.status, 200);
   assert.equal(h.headers.get('x-content-type-options'), 'nosniff');
   assert.match(h.headers.get('content-security-policy'), /frame-ancestors 'none'/);
+  assert.match(h.headers.get('content-security-policy'), /media-src 'self' blob:/);
   const idx = await c.get('/');
   assert.equal(idx.status, 200);
   assert.match(idx.text, /Synthia/);
