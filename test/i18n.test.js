@@ -15,7 +15,7 @@ function boot({ stored = null, nav = 'fr-FR', dict = null } = {}) {
   ctx.window = ctx;
   vm.createContext(ctx);
   vm.runInContext(head.replace('window.__L=null;', 'window.__L=null;' + (dict ? 'window.__L=' + JSON.stringify(dict) + ';' : '')), ctx);
-  return { ctx, written, t: ctx.t };
+  return { ctx, written, t: ctx._t };
 }
 
 test('langue : choix mémorisé, sinon langue du navigateur si livrée, sinon français', () => {
