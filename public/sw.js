@@ -1,6 +1,6 @@
-/* Service worker de Manager.
+/* Service worker de Synthia.
    Pour publier une nouvelle version : changer le numéro ci-dessous. */
-const VERSION = 'manager-mvp-2';
+const VERSION = 'synthia-1';
 
 const ASSETS = [
   './',
