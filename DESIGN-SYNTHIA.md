@@ -105,3 +105,53 @@ Logique du plan, moteur de règles, budgets, offres et prix (FREE 0 FCFA, PREMIU
 - Tests serveur : changement de mot de passe, déconnexion globale, nom dans les e-mails.
 - e2e Chromium : bascule de thème (persistance après rechargement), plus aucune mention « démo » à l'écran, export .ics valide, bouton WhatsApp, texte modifiable, aide.
 - Captures d'écran clair + sombre, mobile + PC, relues avant livraison.
+
+## 10. Révision : palette par défaut violet, palettes au choix, thème par image ou vidéo
+
+Décision de Yan : la palette par défaut reste le **violet d'origine** de l'app de l'équipe. Le teal / orange que j'avais mis par défaut
+(sans qu'on me le demande) devient une palette au choix. Le deck et l'app ne sont donc plus alignés par défaut.
+
+### 10.1 Trois palettes, deux modes chacune
+
+| Palette | Rôle | Source |
+|---|---|---|
+| **Violet** (défaut) | identité de l'app de l'équipe | valeurs d'origine de `Manager_v2` (fond `#0B0816`, accent `#7C3AED` → `#C026D3`, lime du pitch) |
+| **Teal** | identité du deck recoloré | section 3 |
+| **Personnalisée** | couleurs tirées d'une image ou d'une vidéo de l'utilisateur | section 10.2 |
+
+Chaque palette existe en clair et en sombre ; le bouton de mode (auto / clair / sombre) reste indépendant du choix de palette.
+
+Valeurs du violet (variables identiques à la section 3) :
+
+| Variable | Clair | Sombre |
+|---|---|---|
+| `--bg` / `--card` | `#FAF8FF` / `#FFFFFF` | `#0B0816` / `#16102A` |
+| `--tx` / `--mut` | `#17112B` / `#6B6588` | `#F4F1FF` / `#A79FC4` |
+| `--bd` / `--stg` | `#E6E0F5` / `#E9E5F5` | `#2A2147` / `#05030C` |
+| `--pri` → `--pri2` | `#7C3AED` → `#C026D3` | idem |
+| `--pt` (texte accentué) | `#7C3AED` | `#B98CFF` |
+| `--ac` (accent chaud) | `#A21CAF` | `#F0ABFC` |
+
+### 10.2 Thème personnalisé (image ou vidéo)
+
+- **Entrée** : un fichier image (`image/*`, 15 Mo max) ou vidéo (`video/*`, 80 Mo max). Rien n'est envoyé au serveur : tout se fait dans le navigateur, le fichier n'est pas gardé.
+- **Extraction** : l'image (ou une image de la vidéo, prise à la moitié de sa durée, 1 s au plus) est réduite à 48 × 48. Les pixels assez saturés votent pour une teinte (36 classes de 10°, pondérés par la saturation). La teinte gagnante donne la couleur principale, une deuxième teinte à plus de 40° donne l'accent (sinon teinte + 35°). Image presque grise : palette neutre à teinte légère.
+- **Construction** : à partir de la teinte et de la saturation (bornée 35 % à 80 %), on dérive les 20 variables du thème, en clair et en sombre.
+- **Garantie de lisibilité** : un correcteur de contraste ajuste la luminosité de chaque couleur de texte et de bouton jusqu'à atteindre 4,5:1 (WCAG AA) sur son fond. Une image très claire, très sombre ou très vive ne peut donc pas rendre l'app illisible.
+- **Image en fond** : une miniature (JPEG 640 px max) sert de fond du bandeau « hero », sous un voile sombre qui garantit le texte blanc.
+- **Stockage** : localStorage de l'appareil (`pwa-pal`, `pwa-custom`), hors du préfixe `mgr:` (« Repartir de zéro » ne l'efface pas). Si le stockage est plein : le thème s'applique pour la session, sans miniature.
+- **Retour** : bouton « Retirer mon thème » → palette violet.
+- **Application** : le script de tête lit `pwa-pal` et `pwa-custom` avant l'affichage et pose les variables sur `<html>` (pas de flash).
+
+### 10.3 Ce qui devient variable (plus aucune couleur de palette en dur)
+
+Bandeau hero (3 teintes), texte sur hero (2), illustration de l'accueil (4), barres du graphique, anneau de progression, barres d'égaliseur, bulle de message, `theme-color` du navigateur, icône (violet pour la palette par défaut).
+
+### 10.4 Interface
+
+Paramètres > Apparence : « Mode » (automatique / clair / sombre), « Palette » (Violet / Teal / Personnalisée), bouton « Importer une image ou une vidéo », aperçu des couleurs obtenues, « Retirer mon thème ». Messages d'erreur en clair (fichier trop lourd, format non lu, vidéo illisible).
+
+### 10.5 Vérifications
+
+- `scripts/check-contrast.js` couvre violet et teal, clair et sombre.
+- e2e : choix de palette mémorisé ; import d'images de test (jaune vif, presque blanc, presque noir, gris, rouge saturé) : toutes les paires texte / fond du thème obtenu ≥ 4,5:1 dans les deux modes ; fichier non image refusé.
