@@ -109,3 +109,20 @@ Pas de clé réelle dans cet environnement : IA, FedaPay et OAuth sont testés c
 
 - `node --test` : auth, état, IA (faux fournisseurs, sortie invalide, repli, quota), paiement (retour vérifié, webhook, idempotence, faux paiement), OAuth (state, chiffrement, échange avec faux fournisseur).
 - Playwright : inscription, plan, passage PREMIUM en simulation, texte IA, connexion réseau mockée, rechargement.
+
+## 11. Écrans du front (précisions avant codage)
+
+**Paramètres → carte « Mon compte »** (première carte)
+- Invité : deux onglets « Créer un compte » / « Me connecter », champs e-mail + mot de passe (8 caractères min.), un bouton, erreur sous les champs. Phrase : « Sans compte, tes données restent dans ce navigateur. »
+- Connecté : e-mail, offre (et date de fin si PREMIUM), bouton « Me déconnecter » (efface les données locales de l'appareil puis recharge). Si PREMIUM et plusieurs fournisseurs IA : puces « Claude / Gemini / Grok » pour choisir.
+- Après une connexion : si le compte est vide et que le navigateur contient déjà un profil ou un plan → fenêtre « Importer les données de ce navigateur dans ton compte ? » (Oui = import, Non = on repart d'un compte vide). Si le compte contient déjà des données, elles remplacent celles du navigateur.
+
+**Offres** : le bouton PREMIUM lance le paiement (invité → message « Crée un compte » + ouverture de Paramètres). Texte sous le titre : « mode test, aucun argent réel » en simulation, « paiement sécurisé FedaPay » sinon. Si PREMIUM : « Actif jusqu'au … ». La fenêtre de paiement simulé de la maquette est supprimée.
+
+**Retours de redirection** : `/?paid=ok|pending|failed|error|login` → message + rafraîchit l'offre + ouvre Offres. `/?social=ok|denied|error&p=…` → message + recharge les réseaux + ouvre le Tableau de bord. L'adresse est nettoyée ensuite.
+
+**Réseaux** : réseau configuré sur le serveur + connecté → redirection vers la plateforme ; sinon fenêtre de mode démo existante. Un compte réel affiche « connecté », « Actualiser » appelle le serveur (1 relevé / heure), un champ vide reste en saisie manuelle.
+
+**Suivi** : après l'analyse par règles, si PREMIUM + IA disponible, ajout de lignes « ✨ … » (conseils IA) ; mention « ✨ Conseils IA en cours… » pendant l'appel.
+
+**Plan** : textes réécrits par l'IA = `ai:true`, avec la pastille déjà prévue par la maquette.
