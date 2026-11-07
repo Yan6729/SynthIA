@@ -66,8 +66,8 @@ function rateLimit({ max, windowMs, key = (req) => req.ip, now = Date.now }) {
 
 /* Requêtes qui modifient l'état : JSON obligatoire (un <form> ne peut pas en envoyer) et Origin identique s'il est présent. */
 function csrfGuard(cfg, { formPaths = [/^\/pay\/simulate\//] } = {}) {
-  const origin = new URL(cfg.appUrl).origin;
   return (req, res, next) => {
+    const origin = new URL(cfg.appUrl).origin;
     if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return next();
     const o = req.headers.origin;
     if (o && o !== origin) return res.status(403).json({ error: 'origine_refusee' });

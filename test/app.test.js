@@ -34,3 +34,10 @@ test('JSON invalide → 400, route inconnue → 404', async () => {
   assert.equal(r.status, 404);
   await s.close();
 });
+
+test('CSRF : Origin identique à APP_URL accepté', async () => {
+  const s = await start();
+  const r = await fetch(s.base + '/api/auth/register', { method: 'POST', headers: { 'content-type': 'application/json', origin: s.base }, body: JSON.stringify({ email: 'o@b.co', password: 'motdepasse1' }) });
+  assert.equal(r.status, 201);
+  await s.close();
+});
