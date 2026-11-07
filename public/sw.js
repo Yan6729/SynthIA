@@ -1,6 +1,6 @@
 /* Service worker de Manager.
    Pour publier une nouvelle version : changer le numéro ci-dessous. */
-const VERSION = 'manager-mvp-1';
+const VERSION = 'manager-mvp-2';
 
 const ASSETS = [
   './',
@@ -49,7 +49,8 @@ self.addEventListener('fetch', (e) => {
           fetch(req),
           new Promise((_, reject) => setTimeout(() => reject(new Error('lent')), 2500))
         ]);
-        if (res && res.ok) cache.put('index.html', res.clone());
+        // Seule la page d'accueil de l'app sert de secours hors-ligne (pas les pages légales).
+        if (res && res.ok && (url.pathname === '/' || url.pathname.endsWith('/index.html'))) cache.put('index.html', res.clone());
         return res;
       } catch (_) {
         return (await cache.match('index.html')) || Response.error();
