@@ -149,13 +149,70 @@ function fakeWorld() {
   await page.getByRole('button', { name: /^Thème : clair/ }).first().click();
   assert.equal(await page.evaluate(() => document.documentElement.getAttribute('data-theme')), 'dark');
   const bgDark = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-  assert.equal(bgDark, 'rgb(4, 26, 25)');
+  assert.equal(bgDark, 'rgb(11, 8, 22)'); // violet d'origine, sombre
   await page.reload();
   assert.equal(await page.evaluate(() => document.documentElement.getAttribute('data-theme')), 'dark');
   await page.getByRole('button', { name: /^Thème : sombre/ }).first().click(); // retour en automatique
   assert.equal(await page.evaluate(() => document.documentElement.getAttribute('data-theme')), null);
   assert.equal(await page.evaluate(() => localStorage.getItem('pwa-theme')), null);
   step('thème clair / sombre / automatique, mémorisé');
+
+  // 6c2. palettes : violet par défaut, teal au choix, thème tiré d'une image ou d'une vidéo
+  const lumOf = (c) => { const v = [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16) / 255).map((x) => (x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4)); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+  const ratioOf = (a, b) => { const x = lumOf(a), y = lumOf(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  assert.equal(await page.evaluate(() => document.documentElement.getAttribute('data-pal')), 'violet');
+  assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--pri').trim()), '#7C3AED');
+  await page.getByRole('button', { name: 'Paramètres' }).first().click();
+  await page.getByRole('radio', { name: 'Teal' }).click();
+  assert.equal(await page.evaluate(() => document.documentElement.getAttribute('data-pal')), 'teal');
+  await page.reload();
+  assert.equal(await page.evaluate(() => document.documentElement.getAttribute('data-pal')), 'teal'); // mémorisée
+  await page.getByRole('button', { name: 'Paramètres' }).first().click();
+  await page.getByRole('radio', { name: 'Violet' }).click();
+  assert.equal(await page.getByRole('radio', { name: /Personnalisée/ }).count(), 0); // pas de thème perso tant qu'il n'y a pas de fichier
+  // fichier qui n'est ni image ni vidéo : refusé, rien ne change
+  await page.setInputFiles('#theme-file', { name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('bonjour') });
+  await text('Choisis une image ou une vidéo').waitFor();
+  assert.equal(await page.evaluate(() => localStorage.getItem('pwa-custom')), null);
+  // images pièges : le thème obtenu doit rester lisible dans les deux modes
+  const IMGS = { jaune: [['#FFE600']], blanc: [['#FAFAFA']], noir: [['#050505']], gris: [['#808080']], rouge: [['#FF0000']], bicolore: [['#1E40FF', 0.7], ['#FF8A00', 0.3]], neon: [['#39FF14']] };
+  for (const [name, cols] of Object.entries(IMGS)) {
+    const png = await page.evaluate(async (cs) => { const c = document.createElement('canvas'); c.width = 64; c.height = 64; const x = c.getContext('2d'); let y = 0; for (const [col, w = 1] of cs) { x.fillStyle = col; const h = Math.round(64 * w); x.fillRect(0, y, 64, h); y += h; } x.fillStyle = cs[cs.length - 1][0]; x.fillRect(0, y, 64, 64); const b = await new Promise((r) => c.toBlob(r, 'image/png')); return Array.from(new Uint8Array(await b.arrayBuffer())); }, cols);
+    await page.setInputFiles('#theme-file', { name: name + '.png', mimeType: 'image/png', buffer: Buffer.from(png) });
+    await page.getByRole('radio', { name: /Personnalisée/ }).waitFor();
+    await page.waitForFunction(() => document.documentElement.getAttribute('data-pal') === 'custom');
+    const c = await page.evaluate(() => JSON.parse(localStorage.getItem('pwa-custom')));
+    const bad = [];
+    for (const mode of ['light', 'dark']) {
+      const m = c[mode];
+      for (const [f, g, min] of [['--tx', '--bg', 7], ['--tx', '--card', 7], ['--mut', '--bg', 4.5], ['--mut', '--card', 4.5], ['--pt', '--bg', 4.5], ['--pt', '--card', 4.5], ['--ac', '--bg', 4.5], ['--ac', '--card', 4.5], ['--ok', '--card', 4.5], ['--err', '--card', 4.5], ['#FFFFFF', '--pri', 4.5], ['#FFFFFF', '--pri2', 4.5], ['#FFFFFF', '--hero-b', 4.5], ['#D8FF3E', '--hero-b', 4.5], ['--hs1', '--hero-b', 4.5], ['#FFFFFF', '--toast', 4.5]]) {
+        const r = ratioOf(f[0] === '#' ? f : m[f], g[0] === '#' ? g : m[g]);
+        if (r < min) bad.push(`${mode} ${f}/${g} = ${r.toFixed(2)}`);
+      }
+    }
+    assert.deepEqual(bad, [], `contrastes insuffisants pour l'image « ${name} »`);
+  }
+  // le thème obtenu est bien appliqué (variables en ligne), y compris l'image du bandeau, et suit le mode
+  const applied = await page.evaluate(() => ({ pri: document.documentElement.style.getPropertyValue('--pri'), img: document.documentElement.style.getPropertyValue('--hero-img').slice(0, 30), c: JSON.parse(localStorage.getItem('pwa-custom')) }));
+  assert.ok(applied.img.startsWith('url("data:image/jpeg;base64,'), 'miniature appliquée au bandeau');
+  assert.equal(applied.pri, applied.c.light.pri || applied.c.light['--pri']);
+  await page.getByRole('button', { name: /^Thème : automatique/ }).first().click(); // clair
+  await page.getByRole('button', { name: /^Thème : clair/ }).first().click(); // sombre
+  assert.equal(await page.evaluate(() => document.documentElement.style.getPropertyValue('--bg')), applied.c.dark['--bg']);
+  await page.getByRole('button', { name: /^Thème : sombre/ }).first().click(); // automatique
+  // vidéo : une courte vidéo enregistrée dans le navigateur (WebM) donne un thème
+  const webm = await page.evaluate(async () => { const c = document.createElement('canvas'); c.width = 64; c.height = 64; const x = c.getContext('2d'); const st = c.captureStream(10), rec = new MediaRecorder(st, { mimeType: 'video/webm' }), parts = []; rec.ondataavailable = (e) => parts.push(e.data); const done = new Promise((r) => (rec.onstop = r)); rec.start(); for (let i = 0; i < 12; i++) { x.fillStyle = '#E11D48'; x.fillRect(0, 0, 64, 64); await new Promise((r) => setTimeout(r, 100)); } rec.stop(); await done; return Array.from(new Uint8Array(await new Blob(parts, { type: 'video/webm' }).arrayBuffer())); });
+  await page.setInputFiles('#theme-file', { name: 'clip.webm', mimeType: 'video/webm', buffer: Buffer.from(webm) });
+  await page.waitForFunction(() => { try { return JSON.parse(localStorage.getItem('pwa-custom')).sw[0] !== undefined && document.body.innerText.includes('Thème créé') } catch (e) { return false } }, null, { timeout: 15000 });
+  step('palettes : violet par défaut, teal, thème image et vidéo lisible dans les deux modes');
+  await page.reload();
+  assert.equal(await page.evaluate(() => document.documentElement.getAttribute('data-pal')), 'custom'); // thème perso rechargé avant l'affichage
+  await page.getByRole('button', { name: 'Paramètres' }).first().click();
+  await page.getByRole('button', { name: 'Retirer mon thème' }).click();
+  assert.equal(await page.evaluate(() => document.documentElement.getAttribute('data-pal')), 'violet');
+  assert.equal(await page.evaluate(() => document.documentElement.style.getPropertyValue('--pri')), '');
+  assert.equal(await page.evaluate(() => localStorage.getItem('pwa-custom')), null);
+  step('thème personnalisé retiré, retour au violet');
 
   // 6d. hors ligne : bandeau, puis retour
   await ctx.setOffline(true);
