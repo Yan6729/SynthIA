@@ -61,8 +61,9 @@ Les adresses des API externes se changent aussi par variable (`*_BASE`, `*_AUTH_
 ## Tests
 
 ```bash
-npm test      # 43 tests serveur (node:test), aucun accès réseau
+npm test      # tests serveur et front (node:test), aucun accès réseau
 npm run e2e   # parcours complet dans Chromium (Playwright requis), fournisseurs externes simulés
+npm run i18n  # dictionnaires de langue : mêmes clés, mêmes {0}, rien d'oublié
 ```
 
 ## Brancher les vraies clés (checklist)
@@ -114,3 +115,9 @@ Détails et décisions : `DESIGN-SYNTHIA.md`.
 - **Fonctions** : export du plan vers l'agenda (.ics), partage WhatsApp, texte d'action modifiable, démarrage guidé, page Aide, changement de mot de passe, déconnexion de tous les appareils, écran de secours et bandeau hors ligne.
 - **Retiré** : artiste d'exemple, mode démo, faux comptes de réseaux sociaux, délai artificiel.
 - `SUPPORT_EMAIL` : adresse de contact de la page Aide.
+
+### Langues, police, devise
+
+- **Langues de l'interface** : Français, English, Español, Português (Paramètres > Langue et devise). Un fichier par langue dans `public/i18n/`, le texte français sert de clé. Fon : « bientôt disponible » (à faire écrire par un locuteur natif, modèle dans `docs/i18n-fon-modele.csv`). Pour ajouter une langue : copier `en.js`, traduire, ajouter une ligne dans `window.LANGS` et `window.LOCALES` (script de tête de `public/index.html`) et le fichier dans `public/sw.js`, puis `npm run i18n`. Les traductions livrées sont à faire relire par des locuteurs natifs.
+- **Police** : système par défaut ; 14 polices Google Fonts proposées ou n'importe quel nom Google Fonts. Choisir une police Google envoie l'adresse IP de l'appareil à Google (indiqué dans l'app et dans la politique de confidentialité).
+- **Paiement** : en dollars via Stripe (`PAY_MODE=stripe`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `PREMIUM_PRICE_USD`). L'affichage des budgets du plan se règle en USD, EUR ou FCFA.
