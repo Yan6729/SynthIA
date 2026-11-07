@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Lance Manager sur macOS. Usage : ./scripts/start-mac.sh  (ou double-clic sur start-mac.command)
+# Lance Synthia sur macOS. Usage : ./scripts/start-mac.sh  (ou double-clic sur start-mac.command)
 set -e
 cd "$(dirname "$0")/.."
 
@@ -23,6 +23,6 @@ fi
 
 node scripts/setup.js
 npm install
-echo "Manager démarre sur http://localhost:3000 (Ctrl+C pour arrêter)"
+echo "Synthia démarre sur http://localhost:3000 (Ctrl+C pour arrêter)"
 (sleep 2 && open http://localhost:3000) >/dev/null 2>&1 &
 exec node server/index.js

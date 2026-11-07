@@ -1,4 +1,4 @@
-# Lance Manager sur Windows (PowerShell). Utilisé par start-windows.bat.
+# Lance Synthia sur Windows (PowerShell). Utilisé par start-windows.bat.
 $ErrorActionPreference = 'Stop'
 Set-Location (Join-Path $PSScriptRoot '..')
 
@@ -26,6 +26,6 @@ node scripts/setup.js
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 npm install
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-Write-Host 'Manager démarre sur http://localhost:3000 (Ctrl+C pour arrêter)'
+Write-Host 'Synthia démarre sur http://localhost:3000 (Ctrl+C pour arrêter)'
 Start-Job { Start-Sleep 2; Start-Process 'http://localhost:3000' } | Out-Null
 node server/index.js

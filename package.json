@@ -1,8 +1,8 @@
 {
-  "name": "manager-mvp",
+  "name": "synthia",
   "version": "0.1.0",
   "private": true,
-  "description": "Manager : plan de promo musicale pour artistes émergents (MVP)",
+  "description": "Synthia : plan de promo musicale pour artistes émergents (MVP)",
   "type": "commonjs",
   "engines": {
     "node": ">=22"

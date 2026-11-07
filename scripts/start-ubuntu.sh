@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Lance Manager sur Ubuntu / Debian. Usage : ./scripts/start-ubuntu.sh
+# Lance Synthia sur Ubuntu / Debian. Usage : ./scripts/start-ubuntu.sh
 set -e
 cd "$(dirname "$0")/.."
 
@@ -19,5 +19,5 @@ fi
 
 node scripts/setup.js
 npm install
-echo "Manager démarre sur http://localhost:3000 (Ctrl+C pour arrêter)"
+echo "Synthia démarre sur http://localhost:3000 (Ctrl+C pour arrêter)"
 exec node server/index.js

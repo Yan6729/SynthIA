@@ -1,5 +1,5 @@
 'use strict';
-/* Test de bout en bout : vrai serveur Manager + vrai front dans Chromium, fournisseurs externes remplacés par un faux serveur local.
+/* Test de bout en bout : vrai serveur Synthia + vrai front dans Chromium, fournisseurs externes remplacés par un faux serveur local.
    Lancer : npm run e2e   (Playwright et Chromium doivent être installés) */
 const http = require('node:http');
 const assert = require('node:assert/strict');

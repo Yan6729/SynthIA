@@ -1,7 +1,7 @@
 # Lancer : docker compose up --build   →  http://localhost:3000
 # Premier lancement : le fichier .env est créé automatiquement (voir ci-dessous) ou copie .env.example.
 services:
-  manager:
+  synthia:
     build: .
     ports:
       - "${PORT:-3000}:3000"
