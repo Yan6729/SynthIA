@@ -72,9 +72,13 @@ function fakeWorld() {
   await text('zeynab@test.com · offre FREE').waitFor();
   step('inscription, compte affiché (FREE)');
 
-  // 2. artiste d'exemple → état synchronisé sur le serveur
-  await page.getByRole('button', { name: 'Charger l’exemple' }).click();
-  await page.getByRole('button', { name: 'Charger l’artiste d’exemple' }).or(page.locator('[role=alertdialog] button.btn:not(.btn2)')).first().click();
+  // 2. création du profil par le formulaire → état synchronisé sur le serveur
+  await page.getByRole('button', { name: 'Profil' }).first().click();
+  await page.getByLabel('Nom d’artiste').fill('Zeynab Kora');
+  await page.getByLabel('Titre de la chanson').fill('Soleil de Cotonou');
+  await page.getByLabel('Date de sortie souhaitée').fill('2026-12-04');
+  await page.getByRole('button', { name: 'TikTok', exact: true }).click();
+  await page.getByRole('button', { name: 'Créer mon profil' }).click();
   await page.waitForTimeout(1500);
   let st = await stateOnServer();
   assert.equal(st.prof.artist, 'Zeynab Kora');
@@ -125,6 +129,8 @@ function fakeWorld() {
   await page.waitForURL((u) => u.pathname === '/' && u.hostname === '127.0.0.1' && u.port === String(server.address().port));
   await text('Zeynab TT').waitFor();
   assert.match(await page.locator('body').innerText(), /TikTok · connecté/);
+  assert.match(await page.locator('body').innerText(), /Instagram · bientôt disponible/);
+  assert.doesNotMatch(await page.locator('body').innerText(), /démo|démonstration|fictif|simulé/i);
   const accts = (await page.evaluate(() => fetch('/api/social').then((r) => r.json()))).accounts;
   assert.equal(accts.tiktok.hist[0].v, 1500);
   step('TikTok connecté via OAuth, statistiques affichées');
