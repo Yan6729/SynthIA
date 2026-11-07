@@ -87,3 +87,32 @@ test('production : MAIL_MODE=console refusé', () => {
   const errs = validateConfig(loadConfig({ NODE_ENV: 'production', APP_URL: 'https://m.example', PAY_MODE: 'fedapay', FEDAPAY_SECRET_KEY: 'k', TOKEN_KEY: Buffer.alloc(32).toString('base64') }));
   assert.ok(errs.some((e) => /MAIL_MODE/.test(e)));
 });
+
+test('changer le mot de passe : ancien exigé, autres appareils coupés, celui-ci reste connecté', async () => {
+  const { s, c } = await setup();
+  const other = s.client();
+  await other.post('/api/auth/login', { email: 'a@b.co', password: 'motdepasse1' });
+  assert.equal((await other.get('/api/me')).json.user.email, 'a@b.co');
+  assert.equal((await c.post('/api/me/password', { current: 'faux', next: 'nouveaumdp9' })).status, 403);
+  assert.equal((await c.post('/api/me/password', { current: 'motdepasse1', next: 'court' })).status, 400);
+  assert.equal((await c.post('/api/me/password', { current: 'motdepasse1', next: 'motdepasse1' })).status, 400);
+  assert.equal((await s.client().post('/api/me/password', { current: 'motdepasse1', next: 'nouveaumdp9' })).status, 401); // non connecté
+  assert.equal((await c.post('/api/me/password', { current: 'motdepasse1', next: 'nouveaumdp9' })).status, 200);
+  assert.equal((await c.get('/api/me')).json.user.email, 'a@b.co'); // cet appareil reste connecté
+  assert.equal((await other.get('/api/me')).json.user, null); // l'autre est coupé
+  assert.equal((await s.client().post('/api/auth/login', { email: 'a@b.co', password: 'motdepasse1' })).status, 401);
+  assert.equal((await s.client().post('/api/auth/login', { email: 'a@b.co', password: 'nouveaumdp9' })).status, 200);
+  assert.equal((await c.get('/api/me')).json.user.emailVerified, false); // ne confirme pas l'e-mail à la place de l'utilisateur
+  await s.close();
+});
+
+test('déconnexion de tous les appareils', async () => {
+  const { s, c } = await setup();
+  const other = s.client();
+  await other.post('/api/auth/login', { email: 'a@b.co', password: 'motdepasse1' });
+  assert.equal((await s.client().post('/api/auth/logout-all')).status, 401);
+  assert.equal((await c.post('/api/auth/logout-all')).status, 200);
+  assert.equal((await c.get('/api/me')).json.user, null);
+  assert.equal((await other.get('/api/me')).json.user, null);
+  await s.close();
+});

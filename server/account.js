@@ -18,7 +18,9 @@ function mount(deps, overrides = {}) {
     delUserTok: db.prepare('DELETE FROM email_tokens WHERE user_id = ? AND kind = ?'),
     verified: db.prepare('UPDATE users SET email_verified = 1 WHERE id = ?'),
     setPass: db.prepare('UPDATE users SET pass_hash = ?, email_verified = 1 WHERE id = ?'),
+    setPassOnly: db.prepare('UPDATE users SET pass_hash = ? WHERE id = ?'),
     delSessions: db.prepare('DELETE FROM sessions WHERE user_id = ?'),
+    delOtherSessions: db.prepare('DELETE FROM sessions WHERE user_id = ? AND token_hash != ?'),
     delUser: db.prepare('DELETE FROM users WHERE id = ?'),
     state: db.prepare('SELECT key, json FROM user_state WHERE user_id = ?'),
     pays: db.prepare('SELECT offer, amount, provider, status, created_at, paid_at FROM payments WHERE user_id = ? ORDER BY id'),
@@ -61,6 +63,25 @@ function mount(deps, overrides = {}) {
       const u = useToken(req.body?.token, 'reset');
       if (!u) return res.status(400).json({ error: 'lien_invalide', message: 'Ce lien est invalide ou expiré. Redemande un e-mail.' });
       db.transaction(() => { q.setPass.run(hashPassword(pw), u.id); q.delSessions.run(u.id); })(); // déconnecte les autres appareils
+      res.json({ ok: true });
+    }));
+
+    // Changer son mot de passe depuis le compte : l'ancien est exigé, les autres appareils sont déconnectés.
+    app.post('/api/me/password', deps.requireUser, rateLimit({ max: 10, windowMs: 15 * 60 * 1000, key: (r) => 'pw' + r.user.id }), wrap((req, res) => {
+      const cur = String(req.body?.current || '');
+      const next = String(req.body?.next || '');
+      if (!verifyPassword(cur, req.user.pass_hash)) return res.status(403).json({ error: 'mot_de_passe_incorrect', message: 'Le mot de passe actuel est incorrect.' });
+      if (next.length < 8 || next.length > 200) return res.status(400).json({ error: 'mot_de_passe_court', message: 'Mot de passe : 8 caractères minimum.' });
+      if (next === cur) return res.status(400).json({ error: 'identique', message: 'Choisis un mot de passe différent de l’actuel.' });
+      const mine = sha256(String(req.cookies?.sid || ''));
+      db.transaction(() => { q.setPassOnly.run(hashPassword(next), req.user.id); q.delOtherSessions.run(req.user.id, mine); })();
+      res.json({ ok: true });
+    }));
+
+    // Déconnexion de tous les appareils, y compris celui-ci.
+    app.post('/api/auth/logout-all', deps.requireUser, wrap((req, res) => {
+      q.delSessions.run(req.user.id);
+      setCookie(res, 'sid', '', { maxAgeSec: 0, secure: cfg.prod });
       res.json({ ok: true });
     }));
 
