@@ -242,6 +242,20 @@ function fakeWorld() {
   await untilServer((a) => a === null);
   step('avatar : initiale, préréglé, image recadrée 256 px envoyée au compte, fichier non image refusé, retour à l’initiale');
 
+  // 6c2c. devise d'affichage des budgets : dollars par défaut, euros, FCFA ; le paiement reste en dollars
+  assert.equal(await page.evaluate(() => localStorage.getItem('pwa-cur')), null);
+  const planMoney = async () => { await page.getByRole('button', { name: 'Mes plans' }).first().click(); const t = await page.locator('p', { hasText: 'dépenses payantes :' }).first().innerText(); await page.getByRole('button', { name: 'Paramètres' }).first().click(); return t; };
+  assert.match(await planMoney(), /dépenses payantes : (\d+\s?\$|\$\s?\d+)/);
+  await page.getByRole('radio', { name: /€ EUR/ }).click();
+  assert.match(await planMoney(), /dépenses payantes : \d+\s?€/);
+  await page.getByRole('radio', { name: /FCFA/ }).click();
+  assert.match(await planMoney(), /dépenses payantes : \d[\d\s\u202f\u00a0]*(FCFA|F\s?CFA)/);
+  await page.reload();
+  assert.equal(await page.evaluate(() => localStorage.getItem('pwa-cur')), 'xof'); // mémorisée
+  await page.getByRole('button', { name: 'Paramètres' }).first().click();
+  await page.getByRole('radio', { name: /\$ USD/ }).click();
+  step('devise des budgets : dollars par défaut, euros, FCFA, mémorisée');
+
   // 6c3. police : système par défaut, Google Fonts au choix (réseau simulé), nom invalide et police inconnue refusés, mémorisée
   const gfReq = [];
   await page.route('https://fonts.googleapis.com/**', (r) => { const u = r.request().url(); gfReq.push(u); return r.fulfill(/Police\+Inconnue/.test(u) ? { status: 400, contentType: 'text/plain', body: 'nope' } : { status: 200, contentType: 'text/css', body: '/* police simulée */' }); });
