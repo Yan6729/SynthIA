@@ -4,6 +4,7 @@
 const http = require('node:http');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
+const fs = require('node:fs');
 const { chromium } = require('playwright');
 
 const { loadConfig } = require('../server/config');
@@ -117,6 +118,52 @@ function fakeWorld() {
   assert.match(await page.locator('body').innerText(), /Texte IA pour l'action/);
   step('textes IA dans le plan');
 
+  // 6b. fonctions du plan : agenda .ics, WhatsApp, texte modifiable
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /Agenda/ }).click()]);
+  const ics = fs.readFileSync(await dl.path(), 'utf8');
+  assert.match(dl.suggestedFilename(), /^Synthia-agenda-.*\.ics$/);
+  assert.match(ics, /^BEGIN:VCALENDAR\r\n/);
+  assert.match(ics, /\r\nEND:VCALENDAR\r\n$/);
+  assert.equal((ics.match(/BEGIN:VEVENT/g) || []).length, (ics.match(/END:VEVENT/g) || []).length);
+  assert.ok((ics.match(/BEGIN:VEVENT/g) || []).length >= 13);
+  assert.match(ics, /DTSTART:20261123T180000/); // semaine 1, lundi, 18 h (sortie le 4 décembre 2026)
+  assert.ok(ics.split('\r\n').every((l) => Buffer.byteLength(l) <= 75), 'lignes pliées à 75 octets');
+  step('agenda .ics valide');
+  assert.match(await page.getByRole('link', { name: /WhatsApp/ }).first().getAttribute('href'), /^https:\/\/wa\.me\/\?text=/);
+  await page.getByRole('button', { name: 'Modifier le texte' }).first().click();
+  await page.getByLabel('Texte à publier').fill('Mon texte à moi 🎶');
+  await page.getByRole('button', { name: 'Enregistrer' }).click();
+  await text('Texte modifié').waitFor();
+  await text('Mon texte à moi').waitFor();
+  await page.getByRole('button', { name: 'Régénérer' }).click();
+  await text('Tu as modifié des textes').waitFor(); // confirmation avant d'écraser un texte retouché
+  await page.getByRole('button', { name: 'Annuler' }).click();
+  await page.getByRole('button', { name: 'Rétablir l’original' }).click();
+  assert.equal(await page.getByText('Texte modifié').count(), 0);
+  step('WhatsApp, texte modifiable, confirmation avant régénération');
+
+  // 6c. thème : bascule, mémorisé après rechargement, appliqué sans flash
+  assert.equal(await page.evaluate(() => document.documentElement.getAttribute('data-theme')), null);
+  await page.getByRole('button', { name: /^Thème : automatique/ }).first().click();
+  assert.equal(await page.evaluate(() => document.documentElement.getAttribute('data-theme')), 'light');
+  await page.getByRole('button', { name: /^Thème : clair/ }).first().click();
+  assert.equal(await page.evaluate(() => document.documentElement.getAttribute('data-theme')), 'dark');
+  const bgDark = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  assert.equal(bgDark, 'rgb(4, 26, 25)');
+  await page.reload();
+  assert.equal(await page.evaluate(() => document.documentElement.getAttribute('data-theme')), 'dark');
+  await page.getByRole('button', { name: /^Thème : sombre/ }).first().click(); // retour en automatique
+  assert.equal(await page.evaluate(() => document.documentElement.getAttribute('data-theme')), null);
+  assert.equal(await page.evaluate(() => localStorage.getItem('pwa-theme')), null);
+  step('thème clair / sombre / automatique, mémorisé');
+
+  // 6d. hors ligne : bandeau, puis retour
+  await ctx.setOffline(true);
+  await text('Hors ligne').waitFor();
+  await ctx.setOffline(false);
+  await page.waitForFunction(() => !document.body.innerText.includes('Hors ligne :'));
+  step('bandeau hors ligne');
+
   // 7. conseils IA dans le suivi
   await page.getByRole('button', { name: 'Suivi' }).first().click();
   await page.getByRole('button', { name: /Générer le plan de la semaine suivante/ }).click();
@@ -125,6 +172,7 @@ function fakeWorld() {
 
   // 8. connexion TikTok réelle (OAuth contre faux TikTok)
   await page.getByRole('button', { name: 'Tableau de bord' }).first().click();
+  await text('Pour bien démarrer').waitFor(); // démarrage guidé tant que toutes les étapes ne sont pas faites
   await page.getByRole('button', { name: 'Connecter TikTok' }).click();
   await page.waitForURL((u) => u.pathname === '/' && u.hostname === '127.0.0.1' && u.port === String(server.address().port));
   await text('Zeynab TT').waitFor();
@@ -135,9 +183,24 @@ function fakeWorld() {
   assert.equal(accts.tiktok.hist[0].v, 1500);
   step('TikTok connecté via OAuth, statistiques affichées');
 
+  // 8b. page Aide et sécurité du compte
+  await page.getByRole('button', { name: 'Aide' }).first().click();
+  await text('Comment Synthia construit mon plan').waitFor();
+  assert.equal(await page.getByRole('link', { name: /@/ }).count(), 0); // pas de SUPPORT_EMAIL : pas de lien de contact
+  await page.getByRole('button', { name: 'Paramètres' }).first().click();
+  await page.getByRole('button', { name: 'Changer mon mot de passe' }).click();
+  await page.getByLabel('Mot de passe actuel', { exact: true }).fill('faux-mot-de-passe');
+  await page.getByLabel(/Nouveau mot de passe/).fill('motdepasse2');
+  await page.getByRole('button', { name: 'Changer', exact: true }).click();
+  await text('mot de passe actuel est incorrect').waitFor();
+  await page.getByLabel('Mot de passe actuel', { exact: true }).fill('motdepasse1');
+  await page.getByRole('button', { name: 'Changer', exact: true }).click();
+  await text('Mot de passe changé').waitFor();
+  step('aide, changement de mot de passe');
+
   // 9. déconnexion : le navigateur est nettoyé
   await page.getByRole('button', { name: 'Paramètres' }).first().click();
-  await page.getByRole('button', { name: 'Me déconnecter' }).click();
+  await page.getByRole('button', { name: 'Me déconnecter', exact: true }).click();
   await page.waitForLoadState('load');
   await page.waitForTimeout(800);
   assert.equal((await page.evaluate(() => JSON.parse(localStorage.getItem('mgr:prof') || '{}'))).artist || '', ''); // plus aucune donnée du compte sur l'appareil
