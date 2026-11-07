@@ -126,3 +126,21 @@ Pas de clé réelle dans cet environnement : IA, FedaPay et OAuth sont testés c
 **Suivi** : après l'analyse par règles, si PREMIUM + IA disponible, ajout de lignes « ✨ … » (conseils IA) ; mention « ✨ Conseils IA en cours… » pendant l'appel.
 
 **Plan** : textes réécrits par l'IA = `ai:true`, avec la pastille déjà prévue par la maquette.
+
+## 12. Lot 1 bêta : écrans du compte (précisions avant codage)
+
+Tout se passe dans **Paramètres → Mon compte** et au chargement de la page. Aucun nouvel onglet.
+
+**Invité**
+- Sous le formulaire : lien « Mot de passe oublié ? » → remplace le formulaire par un champ e-mail + bouton « Envoyer le lien ». Réponse affichée : « Si un compte existe avec cette adresse, un e-mail vient d'être envoyé. » Lien « Retour ».
+- Mention sous le bouton de création : « En créant un compte, tu acceptes les conditions d'utilisation et la politique de confidentialité » (deux liens, ouverts dans un nouvel onglet).
+
+**Connecté**
+- Si l'e-mail n'est pas vérifié : ligne « Adresse non confirmée » + bouton « Renvoyer l'e-mail » (jamais bloquant).
+- Bouton « Télécharger mes données » (fichier JSON).
+- Zone « Supprimer mon compte » : bouton rouge discret → fenêtre de confirmation avec champ mot de passe, texte « Ton profil, ton plan, tes relevés et tes connexions seront effacés. Les paiements restent enregistrés sans ton nom. » → boutons Annuler / Supprimer définitivement. Après succès : données locales effacées, rechargement.
+- Liens en bas de la carte : Conditions · Confidentialité.
+
+**Liens reçus par e-mail**
+- `/?verify=JETON` : confirmation silencieuse, message « Adresse confirmée ✓ », adresse nettoyée, ouverture de Paramètres.
+- `/?reset=JETON` : ouvre Paramètres avec la carte « Nouveau mot de passe » (un champ, 8 caractères min.). Succès : message, formulaire de connexion affiché. Lien invalide : message d'erreur et retour au formulaire « Mot de passe oublié ».
