@@ -101,8 +101,11 @@ function fakeWorld() {
 
   // 5. paiement simulé → PREMIUM
   await page.getByRole('button', { name: 'Offres' }).first().click();
-  await page.getByRole('button', { name: 'Payer avec Mobile Money' }).click();
+  await text('$9/mois').waitFor();
+  assert.ok(!/FCFA|Mobile Money|FedaPay/.test(await page.locator('body').innerText()), 'plus de Mobile Money ni de FedaPay sur la page des offres');
+  await page.getByRole('button', { name: 'Payer en dollars' }).click();
   await page.waitForURL(/\/api\/pay\/simulate\//);
+  await text('$9.00').waitFor();
   await page.getByRole('button', { name: 'Payer', exact: true }).click();
   await page.waitForURL((u) => u.pathname === '/');
   await text('PREMIUM actif jusqu’au').waitFor();
