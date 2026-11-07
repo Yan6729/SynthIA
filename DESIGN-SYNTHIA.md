@@ -155,3 +155,52 @@ Paramètres > Apparence : « Mode » (automatique / clair / sombre), « Palette 
 
 - `scripts/check-contrast.js` couvre violet et teal, clair et sombre.
 - e2e : choix de palette mémorisé ; import d'images de test (jaune vif, presque blanc, presque noir, gris, rouge saturé) : toutes les paires texte / fond du thème obtenu ≥ 4,5:1 dans les deux modes ; fichier non image refusé.
+
+## 11. Série 3 : police au choix, paiement en dollars, avatar, langues
+
+Demande de Yan : garder le teal en proposition (déjà fait), ajouter dans les paramètres le choix de l'apparence **et de la police** (police récupérable depuis Google Fonts), remplacer Mobile Money par un **paiement en dollars** (le projet dépasse l'Afrique de l'Ouest), ajouter un **avatar** (préréglé ou image importée), et un **choix de langue**.
+
+### 11.1 Police (Paramètres > Apparence)
+
+- **Défaut** : police système (aucun appel externe). Les polices Google ne sont chargées que si l'utilisateur en choisit une.
+- **Liste proposée** (14) : Inter, DM Sans, Poppins, Manrope, Nunito, Montserrat, Space Grotesk, Sora, Outfit, Playfair Display, Lora, Merriweather, Fraunces, JetBrains Mono. Une est « Système ».
+- **Toute autre police Google Fonts** : champ « Autre police » (nom exact, ex. « Bebas Neue »). Le nom est validé (`^[A-Za-z0-9 ]{2,40}$`), la feuille de style est chargée, et la police n'est gardée que si le chargement réussit (sinon message clair, retour à l'ancienne police).
+- **Chargement** : `<link>` vers `fonts.googleapis.com/css2?family=Nom:wght@400;500;600;700&display=swap` ; `font-display: swap` évite le texte invisible ; hors ligne, le texte retombe sur la police système.
+- **Application sans flash** : le script de tête lit `pwa-font`, ajoute le `<link>` et pose `--font` sur `<html>` ; le corps de page utilise `var(--font, <pile système>)`.
+- **Confidentialité** : texte sous le sélecteur : « Choisir une police Google envoie l'adresse IP de ton appareil à Google. La police système n'envoie rien. » Mention ajoutée à la politique de confidentialité.
+- **CSP** : `style-src` + `https://fonts.googleapis.com`, `font-src 'self' https://fonts.gstatic.com`. Rien d'autre n'est ouvert.
+- **Stockage** : localStorage `pwa-font` (par appareil, comme le thème), hors préfixe `mgr:`.
+
+### 11.2 Paiement en dollars
+
+- Mobile Money / FedaPay retirés (code, dépendance `fedapay`, textes, FAQ, pages légales, config).
+- **Stripe Checkout** (carte, et les moyens que Stripe active dans le compte), appelé en REST (pas de SDK, donc une dépendance de moins) :
+  création `POST /v1/checkout/sessions`, relecture `GET /v1/checkout/sessions/:id` (`payment_status = paid`), webhook `Stripe-Signature` (HMAC-SHA256 de `t.corps`, tolérance 5 min, comparaison à temps constant) puis **relecture de la session chez Stripe** avant d'activer (même règle qu'avant : un webhook ne suffit jamais).
+- **Montants** en **cents** (entier). Table `payments` : colonne `currency` ajoutée (`XOF` pour l'historique, `USD` ensuite). Les anciens paiements en FCFA restent lisibles et ne sont pas convertis.
+- **Prix** : `PREMIUM_PRICE_USD`, défaut 9 (à valider par Yan, décision commerciale). Durée 30 jours, pas de renouvellement automatique (inchangé).
+- Mode `simulate` conservé pour le développement (interdit en production), affiche `$9.00`.
+- Variables : `PAY_MODE=stripe|simulate`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
+- **Devise d'affichage des budgets** du plan (réglage, séparé du paiement) : USD (défaut), EUR, FCFA. Le plan garde ses montants de référence en FCFA ; la conversion est un affichage approximatif (taux fixes : 1 USD = 600 FCFA, 1 EUR = 656 FCFA), arrondi. Le paiement PREMIUM reste en USD quoi qu'on affiche.
+
+### 11.3 Avatar
+
+- **Préréglés** : 12 avatars dessinés en SVG dans l'app (disque dégradé aux couleurs de la palette + motif : onde, micro, vinyle, casque, guitare, piano, étoile, note, enceinte, platine, flamme, couronne), plus « initiale » (par défaut, lettre du nom d'artiste).
+- **Image importée** : fichier image (10 Mo max), recadré au carré au centre, réduit à 256 × 256, JPEG qualité 0,85 (réduite jusqu'à passer sous 60 Ko). Tout se fait dans le navigateur.
+- **Stockage** : clé d'état `avatar` ajoutée à la liste blanche du serveur (synchronisée avec le compte comme le profil ; limite 256 Ko par clé inchangée).
+- **Où** : en-tête (petit), Paramètres (carte « Avatar »), profil. Retour à l'initiale en un clic.
+
+### 11.4 Langues
+
+- **Langue de l'interface** (distincte de « Langue du public » du profil, qui décide de la langue des textes à copier).
+- **Livrées** : Français (source), English, Español, Português. **Bêta** : Fon (écrans principaux seulement, à faire relire par un locuteur natif ; badge « bêta » dans le sélecteur). **Prévues ensuite** (même mécanisme, un fichier chacune) : 中文, 日本語, 한국어, Deutsch, Italiano ; l'arabe demande un travail de mise en page de droite à gauche, donc plus tard.
+- **Pourquoi ce choix** : français et anglais couvrent l'Afrique de l'Ouest et l'international ; espagnol et portugais ouvrent l'Amérique latine, le Brésil et l'Afrique lusophone (Cap-Vert, Guinée-Bissau, Angola, Mozambique) ; le fon répond à l'ancrage béninois du projet.
+- **Mécanisme** : le texte français est la clé. `t('Texte français')` renvoie la traduction ou, à défaut, le français (jamais de texte vide ni de clé brute). Les phrases à trous : `t('Bonjour {0}', nom)`. Dictionnaires `public/i18n/<code>.js` (un fichier par langue, mis en cache hors ligne par le service worker). Le script de tête charge celui de la langue choisie avant le reste (`document.write` d'un script du même site).
+- **Changement de langue** : enregistré dans `pwa-lang` puis rechargement de la page (simple, sans état intermédiaire). Première visite : langue du navigateur si elle est livrée, sinon français.
+- **Plan** : les textes du catalogue d'actions sont stockés en français dans le plan et traduits à l'affichage, donc un plan existant change de langue avec l'interface. Les « textes à copier » (publications) restent générés dans la langue du public.
+- **Dates et nombres** : `Intl` avec la langue choisie. `<html lang>` mis à jour.
+- **Hors périmètre** : messages d'erreur du serveur (restent en français sauf codes connus), e-mails, pages légales (français ; traduction juridique à faire valider).
+- **Garde-fou** : `scripts/check-i18n.js` liste les clés manquantes par langue (taux de couverture) et échoue si une clé du dictionnaire n'existe plus dans l'app ou si un `{n}` diffère de la source.
+
+### 11.5 Vérifications prévues
+
+Tests : signature Stripe (valide, périmée, falsifiée), montant en cents, webhook rejoué, relecture obligatoire. e2e : paiement simulé en dollars, choix de police mémorisé (police inconnue refusée), avatar préréglé puis image importée, changement de langue (texte du menu en anglais, de retour en français). Contrastes inchangés.
