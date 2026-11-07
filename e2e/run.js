@@ -11,6 +11,9 @@ const { buildDeps } = require('../server/deps');
 const { createApp } = require('../server/app');
 const { openDb } = require('../server/db');
 
+const mails = []; // e-mails « envoyés » pendant le test
+const db = openDb(':memory:');
+
 function fakeWorld() {
   const srv = http.createServer((req, res) => {
     let b = ''; req.on('data', (d) => (b += d)); req.on('end', () => {
@@ -43,7 +46,7 @@ function fakeWorld() {
     TIKTOK_CLIENT_KEY: 'tk', TIKTOK_CLIENT_SECRET: 'ts', TIKTOK_BASE: W + '/tt', TIKTOK_AUTH_URL: W + '/tt/auth',
   };
   const cfg = loadConfig(env);
-  const app = createApp(buildDeps(cfg, { db: openDb(':memory:') }));
+  const app = createApp(buildDeps(cfg, { db, mailer: { mode: 'test', send: async (m) => { mails.push(m); } } }));
   const server = await new Promise((r) => { const s = app.listen(0, '127.0.0.1', () => r(s)); });
   const base = `http://127.0.0.1:${server.address().port}`;
   cfg.appUrl = base;
@@ -134,6 +137,37 @@ function fakeWorld() {
   assert.equal((await page.evaluate(() => JSON.parse(localStorage.getItem('mgr:prof') || '{}'))).artist || '', ''); // plus aucune donnée du compte sur l'appareil
   assert.equal((await page.evaluate(() => fetch('/api/me').then((r) => r.json()))).user, null);
   step('déconnexion et nettoyage du navigateur');
+
+  // 10. mot de passe oublié par l'interface, avec le lien reçu par e-mail
+  await page.getByRole('button', { name: 'Paramètres' }).first().click();
+  await page.getByRole('button', { name: 'Me connecter' }).first().click();
+  await page.getByRole('button', { name: 'Mot de passe oublié ?' }).click();
+  await page.getByLabel('Adresse e-mail').fill('zeynab@test.com');
+  await page.getByRole('button', { name: 'Envoyer le lien' }).click();
+  await text('Si un compte existe avec cette adresse').waitFor();
+  const resetMail = mails.filter((m) => /nouveau mot de passe/i.test(m.subject)).pop();
+  assert.ok(resetMail, 'e-mail de réinitialisation envoyé');
+  await page.goto(resetMail.text.match(/https?:\/\/\S+reset=\S+/)[0].replace(/^https?:\/\/[^/]+/, base));
+  await page.getByLabel(/Nouveau mot de passe/).fill('nouveaumdp9');
+  await page.getByRole('button', { name: 'Enregistrer' }).click();
+  await text('Mot de passe changé').waitFor();
+  assert.ok(!page.url().includes('reset='), 'adresse nettoyée');
+  step('mot de passe oublié → lien e-mail → nouveau mot de passe');
+
+  // 11. connexion avec le nouveau mot de passe, puis suppression du compte
+  await page.getByLabel('Adresse e-mail').fill('zeynab@test.com');
+  await page.getByLabel(/Mot de passe/).fill('nouveaumdp9');
+  await page.getByRole('button', { name: 'Me connecter' }).last().click();
+  await text('zeynab@test.com · offre').waitFor();
+  assert.equal(await page.getByText('Adresse non confirmée').count(), 0); // le lien de réinitialisation a prouvé l'e-mail
+  await page.getByRole('button', { name: 'Supprimer mon compte' }).click();
+  await page.getByLabel('Ton mot de passe').fill('nouveaumdp9');
+  await page.getByRole('button', { name: 'Supprimer définitivement' }).click();
+  await page.waitForTimeout(1500);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM users').get().n, 0);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM social_accounts').get().n, 0);
+  assert.equal(db.prepare('SELECT user_id FROM payments').get().user_id, null);
+  step('compte supprimé (paiement conservé sans lien)');
 
   await browser.close(); server.close(); world.close();
   if (errors.length) { console.error('Erreurs navigateur :\n' + errors.join('\n')); process.exit(1); }
