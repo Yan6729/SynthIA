@@ -13,6 +13,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - run: npm run contrast
   e2e:
     runs-on: ubuntu-latest
     steps:
