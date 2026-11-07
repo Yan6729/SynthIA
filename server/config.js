@@ -14,6 +14,8 @@ function loadConfig(env = process.env) {
     tokenKey: env.TOKEN_KEY || '',
     publicDir: path.join(__dirname, '..', 'public'),
     sessionDays: 30,
+    logRequests: env.LOG_REQUESTS ? env.LOG_REQUESTS === '1' : prod,
+    mail: { mode: env.MAIL_MODE || (env.RESEND_API_KEY ? 'resend' : 'console'), key: env.RESEND_API_KEY, from: env.MAIL_FROM || 'Manager <no-reply@localhost>', base: env.RESEND_BASE || 'https://api.resend.com' },
     ai: {
       default: env.AI_DEFAULT || 'claude',
       dailyQuota: int(env.AI_DAILY_QUOTA, 30),
@@ -44,6 +46,7 @@ function validateConfig(cfg) {
   if (cfg.prod) {
     if (!cfg.tokenKey) errs.push('TOKEN_KEY manquant');
     if (cfg.pay.mode === 'simulate') errs.push('PAY_MODE=simulate est interdit en production');
+    if (cfg.mail.mode === 'console') errs.push('MAIL_MODE=console n’envoie aucun e-mail : configure RESEND_API_KEY et MAIL_FROM');
     if (!cfg.appUrl.startsWith('https://')) errs.push('APP_URL doit être en https en production');
   }
   if (cfg.tokenKey && Buffer.from(cfg.tokenKey, 'base64').length !== 32) errs.push('TOKEN_KEY doit faire 32 octets (base64)');
