@@ -217,6 +217,31 @@ function fakeWorld() {
   assert.equal(await page.evaluate(() => localStorage.getItem('pwa-custom')), null);
   step('thème personnalisé retiré, retour au violet');
 
+  // 6c2b. avatar : initiale par défaut, préréglé, image importée (recadrée 256 px, JPEG), synchronisé avec le compte, texte piégé refusé
+  const avSrv = async () => (await stateOnServer()).avatar;
+  const untilServer = async (ok) => { for (let i = 0; i < 40; i++) { if (ok(await avSrv())) return; await page.waitForTimeout(250); } throw new Error('avatar non synchronisé avec le serveur'); }; // (waitForFunction n'attend pas les promesses ici)
+  assert.match(await page.locator('button[aria-label="Mon profil"]').first().innerText(), /^Z\nZeynab/); // initiale de « Zeynab » et nom dans la barre latérale
+  await page.getByRole('radio', { name: 'Avatar vinyl' }).click();
+  await page.waitForFunction(() => /"t":"p"/.test(localStorage.getItem('mgr:avatar') || ''));
+  await untilServer((a) => a && a.id === 'vinyl');
+  const big = await page.evaluate(async () => { const c = document.createElement('canvas'); c.width = 900; c.height = 400; const x = c.getContext('2d'); x.fillStyle = '#e11d48'; x.fillRect(0, 0, 900, 400); x.fillStyle = '#2563eb'; x.fillRect(250, 0, 400, 400); const b = await new Promise((r) => c.toBlob(r, 'image/png')); return Array.from(new Uint8Array(await b.arrayBuffer())); });
+  await page.setInputFiles('#avatar-file', { name: 'moi.png', mimeType: 'image/png', buffer: Buffer.from(big) });
+  await text('Avatar mis à jour').waitFor();
+  const saved = JSON.parse(await page.evaluate(() => localStorage.getItem('mgr:avatar')));
+  assert.equal(saved.t, 'u');
+  assert.match(saved.d, /^data:image\/jpeg;base64,/);
+  assert.ok(saved.d.length < 80000);
+  const dim = await page.evaluate((d) => new Promise((r) => { const i = new Image(); i.onload = () => r([i.naturalWidth, i.naturalHeight]); i.src = d; }), saved.d);
+  assert.deepEqual(dim, [256, 256]);
+  await untilServer((a) => a && a.d === saved.d);
+  assert.ok(await page.locator('header img[src^="data:image/jpeg"], aside img[src^="data:image/jpeg"]').count() > 0);
+  await page.setInputFiles('#avatar-file', { name: 'x.txt', mimeType: 'text/plain', buffer: Buffer.from('pas une image') });
+  await text('Choisis une image.').waitFor();
+  assert.equal((await avSrv()).t, 'u'); // le refus n'a rien changé
+  await page.getByRole('button', { name: 'Revenir à l’initiale' }).click();
+  await untilServer((a) => a === null);
+  step('avatar : initiale, préréglé, image recadrée 256 px envoyée au compte, fichier non image refusé, retour à l’initiale');
+
   // 6c3. police : système par défaut, Google Fonts au choix (réseau simulé), nom invalide et police inconnue refusés, mémorisée
   const gfReq = [];
   await page.route('https://fonts.googleapis.com/**', (r) => { const u = r.request().url(); gfReq.push(u); return r.fulfill(/Police\+Inconnue/.test(u) ? { status: 400, contentType: 'text/plain', body: 'nope' } : { status: 200, contentType: 'text/css', body: '/* police simulée */' }); });
