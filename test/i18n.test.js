@@ -27,7 +27,8 @@ test('langue : choix mémorisé, sinon langue du navigateur si livrée, sinon fr
   assert.deepEqual(b.ctx.attr, ['lang', 'es']);
   assert.match(b.written[0], /^<script src="i18n\/es\.js"><\/script>$/);
   assert.equal(boot({ stored: 'fr' }).written.length, 0);                // le français n'a pas de dictionnaire
-  assert.equal(boot({ stored: 'fon' }).ctx.__loc, 'fr-FR');
+  assert.equal(boot({ stored: 'fon' }).ctx.__lang, 'fr');                // Fon : « bientôt », non sélectionnable → français
+  assert.equal(boot({ stored: 'fon', nav: 'en-GB' }).ctx.__lang, 'en');
   assert.equal(boot({ stored: 'en' }).ctx.__loc, 'en-US');
 });
 
@@ -60,4 +61,20 @@ test('t : caractères spéciaux dans les clés, retours à la ligne, pas de capt
   assert.equal(t('Prix ($) : 9 + (taxes) [a.b]'), 'Price ($): 9 + (tax) [a.b]');
   assert.equal(t('Prix ($) : x + (taxes) [axb]'), 'Prix ($) : x + (taxes) [axb]');   // le point est littéral
   assert.equal(t('Lundi a\nb'), 'Monday a\nb');
+});
+
+test('t : valeur insérée en minuscule traduite, capture vide, phrases assemblées (_ts)', () => {
+  const { t, ctx } = boot({ stored: 'en', dict: {
+    'Stade': 'Stage', 'Émergent': 'Emerging',
+    'À ton stade ({0}), {1}, sans aucun coût.': 'At your stage ({0}), {1}, at no cost.',
+    'Un extrait court d’un titre {0} est le moyen le plus rapide de te faire découvrir{1}.': 'A short clip of a {0} track is the fastest way to be discovered{1}.',
+    'Adapté à tes réseaux : {0}.': 'Adapted to your networks: {0}.',
+    'TikTok': 'TikTok',
+    'Les coulisses créent de la proximité.': 'Behind the scenes builds closeness.',
+  } });
+  assert.equal(t('À ton stade (émergent), faire X, sans aucun coût.'), 'At your stage (emerging), faire X, at no cost.');
+  assert.equal(t('Un extrait court d’un titre Rap est le moyen le plus rapide de te faire découvrir.'), 'A short clip of a Rap track is the fastest way to be discovered.');
+  assert.equal(ctx._ts('Les coulisses créent de la proximité. Adapté à tes réseaux : TikTok.'), 'Behind the scenes builds closeness. Adapted to your networks: TikTok.');
+  assert.equal(ctx._ts('Phrase inconnue. Autre phrase.'), 'Phrase inconnue. Autre phrase.');
+  assert.equal(boot({ stored: 'fr' }).ctx._ts('Texte. Suite.'), 'Texte. Suite.');
 });

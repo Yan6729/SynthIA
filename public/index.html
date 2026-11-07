@@ -90,23 +90,26 @@ window.__theme=function(){try{var v=localStorage.getItem('pwa-theme');return v==
 window.__applyTheme(window.__theme());
 /* Langue de l'interface. Le texte français du code est la clé : _t('Texte français') renvoie la traduction, ou le français à défaut.
    Une langue = un dictionnaire public/i18n/<code>.js qui pose window.__L = {"texte français": "traduction"}. Une clé avec {0}, {1}… sert aussi de modèle
-   pour traduire à l'affichage les phrases déjà assemblées (le plan est stocké en français). [code, nom, bêta] */
-window.LANGS=[['fr','Français',0],['en','English',0],['es','Español',0],['pt','Português',0],['fon','Fon',1]];
+   pour traduire à l'affichage les phrases déjà assemblées (le plan est stocké en français). [code, nom, statut : 0 prête, 1 bêta, 2 bientôt (non sélectionnable)] */
+window.LANGS=[['fr','Français',0],['en','English',0],['es','Español',0],['pt','Português',0],['fon','Fon',2]];
 window.LOCALES={fr:'fr-FR',en:'en-US',es:'es-ES',pt:'pt-PT',fon:'fr-FR'};
-window.__lang=(function(){var l=null,ok=window.LANGS.map(function(x){return x[0]});try{l=localStorage.getItem('pwa-lang')}catch(e){}
+window.__lang=(function(){var l=null,ok=window.LANGS.filter(function(x){return x[2]<2}).map(function(x){return x[0]});try{l=localStorage.getItem('pwa-lang')}catch(e){}
 if(ok.indexOf(l)<0){var n=((navigator.languages&&navigator.languages[0])||navigator.language||'fr').toLowerCase().split('-')[0];l=ok.indexOf(n)>=0?n:'fr'}return l})();
 document.documentElement.setAttribute('lang',window.__lang);
 window.__L=null;
 if(window.__lang!=='fr')document.write('<script src="i18n/'+window.__lang+'.js"><\/script>');
 window._t=(function(){var D=null,P=[],C={};
-function init(){D=window.__L||{};P=[];Object.keys(D).forEach(function(k){if(!/\{\d+\}/.test(k))return;var idx=[],re='^'+k.split(/(\{\d+\})/).map(function(p){var m=/^\{(\d+)\}$/.exec(p);if(m){idx.push(+m[1]);return '([\\s\\S]+?)'}return p.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}).join('')+'$';P.push([new RegExp(re),idx,D[k]])})}
+function init(){D=window.__L||{};P=[];Object.keys(D).forEach(function(k){if(!/\{\d+\}/.test(k))return;var idx=[],re='^'+k.split(/(\{\d+\})/).map(function(p){var m=/^\{(\d+)\}$/.exec(p);if(m){idx.push(+m[1]);return '([\\s\\S]*?)'}return p.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}).join('')+'$';P.push([new RegExp(re),idx,D[k]])})}
+function tx(x){var t=_t(x);if(t===x&&x){var c=x.charAt(0).toUpperCase()+x.slice(1);if(c!==x){var t2=_t(c);if(t2!==c)t=t2.charAt(0).toLowerCase()+t2.slice(1)}}return t}
 function sub(s,a){for(var i=0;i<a.length;i++)s=s.split('{'+i+'}').join(a[i]);return s}
 return function _t(k){var a=[].slice.call(arguments,1);if(typeof k!=='string')return k;if(!D)init();
 var r=D[k];if(r!==undefined)return a.length?sub(r,a):r;
 if(a.length)return sub(k,a);
 if(C[k]!==undefined)return C[k];
-var out=k;for(var i=0;i<P.length;i++){var m=P[i][0].exec(k);if(m){var v=[];P[i][1].forEach(function(n,j){v[n]=_t(m[j+1])});out=sub(P[i][2],v);break}}
+var out=k;for(var i=0;i<P.length;i++){var m=P[i][0].exec(k);if(m){var v=[];P[i][1].forEach(function(n,j){v[n]=tx(m[j+1])});out=sub(P[i][2],v);break}}
 if(Object.keys(C).length<3000)C[k]=out;return out}})();
+/* Phrases assemblées en français (plusieurs phrases d'un coup) : traduit tout, sinon phrase par phrase. */
+window._ts=function(s){if(typeof s!=='string'||window.__lang==='fr')return s;var r=_t(s);if(r!==s)return r;var p=s.split(/([.!?]\s+)/),o='';for(var i=0;i<p.length;i+=2){var sep=p[i+1]||'',seg=p[i],t=sep?_t(seg+sep.charAt(0)):_t(seg);if(sep&&t!==seg+sep.charAt(0))o+=t+sep.slice(1);else o+=_t(seg)+sep}return o};
 window.__loc=window.LOCALES[window.__lang]||'fr-FR';
 /* Police : système par défaut. Une police Google Fonts n'est chargée que si l'utilisateur l'a choisie (pwa-font). */
 window.__fontOk=function(n){return typeof n==='string'&&/^[A-Za-z0-9 ]{2,40}$/.test(n)&&n.trim()===n};
@@ -322,7 +325,7 @@ function Loader(){const m=[_t("Lecture de ton profil…"),_t("Choix des réseaux
 const Act=({a,on,tog,copy,save,reset})=>{const [ed,setEd]=useState(false),[v,setV]=useState(a.text);return html`<div class="card mb-3"><div class="flex items-center justify-between"><span class="text-sm font-bold" style=${{color:'var(--pt)'}}>${_t("{0} à {1}",_t(a.day),a.when)}</span><button class=${'chip '+(on?'on':'')} onClick=${()=>tog(a.id)}>${on?_t("✓ Fait"):_t("À faire")}</button></div>
 <p class="font-semibold mt-2">${a.from&&html`<span class="chip on text-xs mr-1">${_t("Ajouté après S{0}",a.from)}</span>`}<span class="mut font-normal">${_t("Quoi faire :")} </span>${_t(a.what)}</p>
 <div class="grid grid-cols-2 gap-x-3 gap-y-1 mt-2 text-sm"><p><span class="mut">${_t("Où :")} </span>${_t(a.ch)}</p><p><span class="mut">${_t("Quand :")} </span>${_t(a.day)}${a.date?' '+a.date:''}, ${a.when}</p><p><span class="mut">${_t("Temps :")} </span>${a.time}</p><p><span class="mut">${_t("Coût :")} </span>${a.cost>0?_t("{0} (facultatif)",MN(a.cost)):MN(0)}</p><p class="col-span-2"><span class="mut">${_t("Mesure :")} </span>${_t(a.measure)}</p></div>
-${a.why&&html`<details class="mt-2 text-sm"><summary class="cursor-pointer mut">${_t("Pourquoi ce conseil ?")}</summary><p class="mt-1">${_t(a.why)}</p><p class="mt-1"><span class="mut">${_t("Objectif :")} </span>${_t(a.aim)}</p><p class="mt-1"><span class="mut">${_t("Repose sur :")} </span>${(a.basis||[]).map(b=>_t(b)).join(' · ')}</p></details>`}${ed?html`<div class="mt-3"><textarea class="inp" rows="5" aria-label=${_t("Texte à publier")} value=${v} onInput=${e=>setV(e.target.value)}></textarea><div class="flex gap-2 mt-2"><button class="chip" onClick=${()=>{setEd(false);setV(a.text)}}>${_t("Annuler")}</button><button class="chip on" disabled=${!v.trim()} onClick=${()=>{save(a.id,v.trim());setEd(false)}}>${_t("Enregistrer")}</button></div></div>`:html`<div class="mt-3 rounded-xl p-3 text-sm" style=${{background:'var(--bg)'}}><div class="flex gap-2 items-start"><span class="flex-1" style=${{whiteSpace:'pre-line'}}>${a.edited?html`<b class="text-xs pt">${_t("Texte modifié ·")} </b>`:a.ai&&html`<b class="text-xs pt">${_t("Texte rédigé par IA ·")} </b>`}${a.text}</span><button aria-label=${_t("Copier le texte")} class="p-1" onClick=${()=>copy(a.text)}><${I} n="copy" s=${18}/></button></div>
+${a.why&&html`<details class="mt-2 text-sm"><summary class="cursor-pointer mut">${_t("Pourquoi ce conseil ?")}</summary><p class="mt-1">${_ts(a.why)}</p><p class="mt-1"><span class="mut">${_t("Objectif :")} </span>${_t(a.aim)}</p><p class="mt-1"><span class="mut">${_t("Repose sur :")} </span>${(a.basis||[]).map(b=>_t(b)).join(' · ')}</p></details>`}${ed?html`<div class="mt-3"><textarea class="inp" rows="5" aria-label=${_t("Texte à publier")} value=${v} onInput=${e=>setV(e.target.value)}></textarea><div class="flex gap-2 mt-2"><button class="chip" onClick=${()=>{setEd(false);setV(a.text)}}>${_t("Annuler")}</button><button class="chip on" disabled=${!v.trim()} onClick=${()=>{save(a.id,v.trim());setEd(false)}}>${_t("Enregistrer")}</button></div></div>`:html`<div class="mt-3 rounded-xl p-3 text-sm" style=${{background:'var(--bg)'}}><div class="flex gap-2 items-start"><span class="flex-1" style=${{whiteSpace:'pre-line'}}>${a.edited?html`<b class="text-xs pt">${_t("Texte modifié ·")} </b>`:a.ai&&html`<b class="text-xs pt">${_t("Texte rédigé par IA ·")} </b>`}${a.text}</span><button aria-label=${_t("Copier le texte")} class="p-1" onClick=${()=>copy(a.text)}><${I} n="copy" s=${18}/></button></div>
 <div class="flex flex-wrap gap-2 mt-2"><button class="chip text-xs" onClick=${()=>{setV(a.text);setEd(true)}}>${_t("Modifier le texte")}</button><a class="chip text-xs inline-flex items-center gap-1" href=${'https://wa.me/?text='+encodeURIComponent(a.text)} target="_blank" rel="noopener noreferrer" aria-label=${_t("Envoyer ce texte sur WhatsApp")}><${I} n="share" s=${12}/> ${_t("WhatsApp")}</a>${a.edited&&html`<button class="chip text-xs" onClick=${()=>reset(a.id)}>${_t("Rétablir l’original")}</button>`}</div></div>`}</div>`};
 function Plan({plan,gen,busy,done,tog,wk,setWk,copy,share,go,pdf,ics,arch,open,offer,created,saveText,resetText}){
 const pc=useWide();
@@ -522,11 +525,11 @@ return html`<div><h1 class="text-2xl font-extrabold">${_t("Paramètres")}</h1><p
 <${Compte}/>
 <div class="card"><h2 class="font-bold">${_t("Langue et devise")}</h2>
 <p class="text-sm mut mt-1">${_t("Langue de l’interface. La langue de ton public (pour les textes à copier dans tes publications) se règle dans ton profil.")}</p>
-<div class="flex flex-wrap gap-2 mt-3" role="radiogroup" aria-label=${_t("Langue de l’interface")}>${LANGS.map(([c,n,beta])=>html`<button type="button" key=${c} role="radio" aria-checked=${__lang===c} lang=${c} class=${'chip inline-flex items-center gap-1.5 '+(__lang===c?'on':'')} onClick=${()=>setLang(c)}>${n}${beta?html`<span class="text-xs opacity-80">${_t("bêta")}</span>`:null}</button>`)}</div>
-${LANGS.find(l=>l[0]===__lang)[2]?html`<p class="text-xs mut mt-2">${_t("Cette langue est en bêta : les écrans principaux sont traduits, le reste reste en français en attendant la relecture par un locuteur natif.")}</p>`:null}
+<div class="flex flex-wrap gap-2 mt-3" role="radiogroup" aria-label=${_t("Langue de l’interface")}>${LANGS.map(([c,n,st])=>html`<button type="button" key=${c} role="radio" aria-checked=${__lang===c} aria-disabled=${st===2} disabled=${st===2} lang=${c} class=${'chip inline-flex items-center gap-1.5 '+(__lang===c?'on':'')+(st===2?' opacity-60':'')} onClick=${()=>setLang(c)}>${st===2?_t("{0} · bientôt disponible",n):n}${st===1?html`<span class="text-xs opacity-80">${_t("bêta")}</span>`:null}</button>`)}</div>
+${LANGS.find(l=>l[0]===__lang)[2]===1?html`<p class="text-xs mut mt-2">${_t("Cette langue est en bêta : les écrans principaux sont traduits, le reste reste en français en attendant la relecture par un locuteur natif.")}</p>`:null}
 <p class="text-xs mut mt-2">${_t("Changer de langue recharge la page. Tes données ne bougent pas.")}</p>
 <p class="text-sm font-medium mt-4">${_t("Devise des budgets")}</p>
-<div class="flex flex-wrap gap-2 mt-1" role="radiogroup" aria-label=${_t("Devise des budgets")}>${Object.entries(CURS).map(([k,[c,,sym]])=>html`<button type="button" key=${k} role="radio" aria-checked=${cur===k} class=${'chip '+(cur===k?'on':'')} onClick=${()=>setCur(k)}>${sym} ${c==='XOF'?'FCFA':c}</button>`)}</div>
+<div class="flex flex-wrap gap-2 mt-1" role="radiogroup" aria-label=${_t("Devise des budgets")}>${Object.entries(CURS).map(([k,[c,,sym]])=>html`<button type="button" key=${k} role="radio" aria-checked=${cur===k} class=${'chip '+(cur===k?'on':'')} onClick=${()=>setCur(k)}>${c==='XOF'?'FCFA (XOF)':sym+' '+c}</button>`)}</div>
 <p class="text-xs mut mt-2">${_t("Les montants du plan sont convertis à titre indicatif (1 $ ≈ 600 FCFA, 1 € ≈ 656 FCFA). Le paiement PREMIUM se fait toujours en dollars.")}</p></div>
 <div class="card"><h2 class="font-bold">${_t("Avatar")}</h2>
 <div class="flex items-center gap-3 mt-3"><${Avatar} a=${avatar} name=${artist} s=${56}/><p class="text-sm mut">${avatar&&avatar.t==='u'?_t("Ton image"):avatar&&avatar.t==='p'?_t("Avatar choisi"):_t("Initiale de ton nom d’artiste")}</p></div>
@@ -662,7 +665,7 @@ T(TP('Objectifs prévisionnels (à confirmer par tes résultats réels) : {0} pu
 L2.forEach(a=>{need(110);d.setDrawColor(211,232,229);d.line(M,y,M+L,y);y+=6;
 T(TP(a.day)+(a.date?' '+a.date:'')+', '+a.when+' - '+TP(a.ch),{b:1,c:[15,118,110]});T(TP('Quoi : {0}',TP(a.what)),{b:1});
 T(TP('Durée : {0}',a.time)+'   |   '+TP('Coût : {0}',MN(a.cost,1)+(a.cost>0?' '+TP('(facultatif)'):''))+'   |   '+TP('Mesure : {0}',TP(a.measure)),{s:9});
-if(a.why)T(TP('Pourquoi : {0}',TP(a.why)),{s:9,c:[75,107,104]});
+if(a.why)T(TP('Pourquoi : {0}',_ts(a.why)),{s:9,c:[75,107,104]});
 T(TP('Texte à copier : {0}',a.text.replace(/\n/g,' ')),{s:9,i:1,g:6})})}
 need(100);y+=12;T(TP('Indicateurs de performance à suivre'),{s:13,b:1,c:[15,118,110],g:2});
 T(TP("Chaque semaine : nombre de publications, vues, interactions et nouveaux abonnés, par réseau. Compare-les aux objectifs prévisionnels ci-dessus, puis ajuste ton plan dans l’onglet Suivi."));
