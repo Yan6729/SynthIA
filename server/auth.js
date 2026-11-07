@@ -7,7 +7,7 @@ const COOKIE = 'sid';
 
 function userView(u) {
   const now = Date.now();
-  return { id: u.id, email: u.email, offer: u.premium_until > now ? 'PREMIUM' : 'FREE', premiumUntil: u.premium_until > now ? u.premium_until : null, aiProvider: u.ai_provider || null };
+  return { id: u.id, email: u.email, emailVerified: !!u.email_verified, offer: u.premium_until > now ? 'PREMIUM' : 'FREE', premiumUntil: u.premium_until > now ? u.premium_until : null, aiProvider: u.ai_provider || null };
 }
 
 function mount(deps) {
@@ -57,6 +57,7 @@ function mount(deps) {
       if (q.byEmail.get(email)) return res.status(409).json({ error: 'email_pris', message: 'Un compte existe déjà avec cette adresse.' });
       const info = q.insert.run(email, hashPassword(pw), Date.now());
       open(res, info.lastInsertRowid);
+      if (deps.afterRegister) Promise.resolve(deps.afterRegister(q.byId.get(info.lastInsertRowid))).catch(() => {});
       res.status(201).json({ user: userView(q.byId.get(info.lastInsertRowid)) });
     }));
 

@@ -3,6 +3,7 @@
 module.exports = [
   require('./auth').mount,
   require('./me').mount,
+  require('./account').mount,
   require('./state').mount,
   require('./ai').mount,
   require('./pay').mount,
