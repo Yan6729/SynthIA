@@ -41,3 +41,29 @@ test('import des données d\'invité : une seule fois, sans écraser', async () 
   assert.ok(!('offer' in st) && !('hack' in st));
   await s.close();
 });
+
+test('avatar : null, préréglé ou petit JPEG seulement ; tout le reste est refusé', async () => {
+  const s = await start();
+  const c = s.client();
+  await c.post('/api/auth/register', { email: 'a@b.co', password: 'motdepasse1' });
+  const put = (value) => c.put('/api/state/avatar', { value });
+  const jpeg = 'data:image/jpeg;base64,' + Buffer.alloc(3000, 7).toString('base64');
+  assert.equal((await put(null)).status, 200);
+  assert.equal((await put({ t: 'p', id: 'vinyl' })).status, 200);
+  assert.equal((await put({ t: 'u', d: jpeg })).status, 200);
+  assert.deepEqual((await c.get('/api/state')).json.state.avatar, { t: 'u', d: jpeg });
+  for (const bad of [
+    'x', 42, [], {}, { t: 'p' }, { t: 'p', id: 'Vinyl' }, { t: 'p', id: '../x' }, { t: 'p', id: 'vinyl', extra: 1 },
+    { t: 'u', d: 'javascript:alert(1)' }, { t: 'u', d: 'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=' },
+    { t: 'u', d: 'data:image/png;base64,AAAA' }, { t: 'u', d: 'data:image/jpeg;base64,AA"onerror="x' },
+    { t: 'u', d: 'data:image/jpeg;base64,' + 'A'.repeat(100001) }, { t: 'u', d: jpeg, x: 1 },
+  ]) assert.equal((await put(bad)).status, 400, JSON.stringify(bad).slice(0, 60));
+  assert.deepEqual((await c.get('/api/state')).json.state.avatar, { t: 'u', d: jpeg }); // les refus n'ont rien changé
+  // import d'invité : un avatar invalide est ignoré, les autres clés passent
+  const c2 = s.client();
+  await c2.post('/api/auth/register', { email: 'z@b.co', password: 'motdepasse1' });
+  const r = await c2.post('/api/state/import', { state: { avatar: { t: 'u', d: 'data:text/html;base64,AAAA' }, seen: { a: 1 } } });
+  assert.equal(r.json.imported, 1);
+  assert.equal((await c2.get('/api/state')).json.state.avatar, undefined);
+  await s.close();
+});
